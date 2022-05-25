@@ -1,0 +1,6 @@
+- name: CG20
+  cds_id: J/A+A/640/A1
+  author: Cantat-Gaudin et al. 2020
+  table_names:
+      clusters_params: table1
+      cluster_members: nodup
