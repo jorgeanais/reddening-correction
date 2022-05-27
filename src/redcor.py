@@ -17,8 +17,12 @@ def reddening_correction(cl: StarCluster) -> None:
 
     dm = 5 * np.log10(dist) - 5
     color_excess = (RE_AGBP_AV - RE_AGRP_AV) * A_V
+    A_G = RE_AG_AV * A_V
 
-    cl.datatable["Gmag_corr"] = cl.datatable["Gmag"] - dm - RE_AG_AV * A_V
+    cl.datatable["E(GBP - GRP)"] = color_excess
+    cl.datatable["A_G"] = A_G
+
+    cl.datatable["Gmag_corr"] = cl.datatable["Gmag"] - dm - A_G
     cl.datatable["BP-RP_corr"] = cl.datatable["BP-RP"] - color_excess
 
 

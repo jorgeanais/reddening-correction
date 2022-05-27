@@ -1,9 +1,9 @@
-cluster_selection:
+clusters:
   - IC 2714
   - Melotte 71
   - NGC_1245
   - NGC_1817
-  - NGC_2099
+  - NGC_2099  # Cordoni's paper example
   - NGC_2360
   - NGC_2818
   - NGC_3114
@@ -11,14 +11,14 @@ cluster_selection:
   - NGC_5822
   - NGC_6705
   - NGC_2287
-  - Collinder_110  # Jorge's selection
+  - Collinder_110  # Jorge's selection from now on
   - Collinder_463
   - IC_4725
   - NGC_1817
   - NGC_2168
   - NGC_2204
   - NGC_2360
-  - NGC_2423
+  - NGC_2423 
   - NGC_2447
   - NGC_2506
   - NGC_6134
