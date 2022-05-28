@@ -19,11 +19,11 @@ def reddening_correction(cl: StarCluster) -> None:
     color_excess = (RE_AGBP_AV - RE_AGRP_AV) * A_V
     A_G = RE_AG_AV * A_V
 
-    cl.datatable["E(GBP - GRP)"] = color_excess
-    cl.datatable["A_G"] = A_G
+    cl.paramtable["E(GBP - GRP)"] = color_excess
+    cl.paramtable["A_G"] = A_G
 
-    cl.datatable["Gmag_corr"] = cl.datatable["Gmag"] - dm - A_G
-    cl.datatable["BP-RP_corr"] = cl.datatable["BP-RP"] - color_excess
+    cl.membertable["Gmag_corr"] = cl.membertable["Gmag"] - dm - A_G
+    cl.membertable["BP-RP_corr"] = cl.membertable["BP-RP"] - color_excess
 
 
 def apply_reddening_correction(clusters: dict[str, StarCluster]) -> None:

@@ -11,7 +11,7 @@ class StarCluster:
 
     name: str
     coordinates: SkyCoord = field(repr=False)
-    datatable: table.Table = field(repr=False)
+    membertable: table.Table = field(repr=False)
     paramtable: table.Table = field(repr=False)
 
 
