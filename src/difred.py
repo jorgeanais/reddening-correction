@@ -9,6 +9,12 @@ import pickle
 from src.settings import Config
 
 
+def _cols2array(table: Table, columns: list[str]) -> np.ndarray:
+    """Convert a list of columns from an astropy table to an array"""
+
+    return np.array([table[col].data for col in columns])
+
+
 def differential_reddening(
     cmd_data: np.ndarray,
     reddening_vector: tuple[float, float],
@@ -16,18 +22,7 @@ def differential_reddening(
 ) -> np.ndarray:
     """Differential Reddening correction"""
 
-    # CMD translation
-    o = np.array([origin[0], origin[1]]).reshape(2, 1)
-    data = cmd_data - o
-
-    # CMD Rotation
-    theta = -np.arctan2(reddening_vector[1], reddening_vector[0])
-    print(f"Rotation angle: {np.rad2deg(theta):.1f}°")
-    c, s = np.cos(theta), np.sin(theta)
-    rotation_matrix = np.array([[c, -s], [s, c]])
-
-    rotated_data = rotation_matrix @ data
-    return rotated_data
+    # Get reference frame
 
     # Generation of fiducial line
 
@@ -37,104 +32,63 @@ def differential_reddening(
 
     # Estimation of differential extinction
 
-
-def cols2array(table: Table, columns: list[str]) -> np.ndarray:
-    """Convert a list of columns to an array."""
-
-    return np.array([table[col].data for col in columns])
+    pass
 
 
-def plot_cmd(
-    cmd_data: np.ndarray,
-    reddening_vector: tuple[float, float],
+def get_points_within_rectangle_region(
+    data: np.ndarray,
+    limits: tuple[float, float, float, float],
+) -> np.ndarray:
+    """Return points that are inside a predefined rectangular region"""
+
+    x1, x2, y1, y2 = limits
+    above_inf = np.all(data >= np.array([[x1],[y1]]), axis=0)
+    below_sup = np.all(data <= np.array([[x2],[y2]]), axis=0)
+    mask = above_inf*below_sup
+    return data[:, mask]
+
+
+def linear_transformation(
+    data: np.ndarray,
     origin: tuple[float, float],
-    object_name: str,
-) -> None:
-    """Plot CMD"""
+    vector: tuple[float, float],
+) -> np.ndarray:
+    """Perform translation and rotation according to an origin point and vector angle"""
 
-    import matplotlib.pyplot as plt
+    #  translation
+    o = np.array([origin[0], origin[1]]).reshape(2, 1)
 
-    dpi = 60
-    plt.figure(figsize=(920 / dpi, 720 / dpi), dpi=dpi)
+    # CMD Rotation
+    rot_angle = -np.arctan2(vector[1], vector[0])
+    print(f"Rotation angle: {np.rad2deg(rot_angle):.1f}°")
+    c, s = np.cos(rot_angle), np.sin(rot_angle)
+    rotation_matrix = np.array([[c, -s], [s, c]])
 
-    slope = reddening_vector[1] / reddening_vector[0]
+    return rotation_matrix @ (data - o)
 
-    plt.scatter(cmd_data[0], cmd_data[1], alpha=0.5, s=10)
-    plt.axline(origin, slope=slope, color="black", linestyle=(0, (5, 5)))
-    plt.axline(origin, slope=-1.0 / slope, color="black", linestyle=(0, (5, 5)))
-    plt.quiver(
-        origin[0],
-        origin[1],
-        reddening_vector[0],
-        reddening_vector[1],
-        angles="xy",
-        scale_units="xy",
-        scale=1,
-        width=0.025,
-        color="red",
-        zorder=10,
-    )
+def get_fiducial_line(
+    data: np.ndarray,
+    step: float = 0.4,
+) -> np.ndarray:
+    """Get the fiducial line"""
 
-    theta_ab = -np.arctan2(reddening_vector[1], reddening_vector[0])
-    ab_factor = 1.5
-    ab_label = [
-        (origin[0] + 0.1) + ab_factor * np.cos(theta_ab),
-        (origin[1] + 0.1) - ab_factor * np.sin(theta_ab),
-    ]
-    plt.text(
-        ab_label[0],
-        ab_label[1],
-        "Abscissa",
-        fontsize=14,
-        rotation=np.rad2deg(theta_ab),
-        rotation_mode="anchor",
-    )
+    # Bin data along the ordinate
 
-    theta_or = np.pi * 0.5 + theta_ab
-    or_factor = 0.4
-    or_label = [
-        (origin[0] + 0.2) + or_factor * np.cos(theta_or),
-        (origin[1] + 0.1) - or_factor * np.sin(theta_or),
-    ]
-    plt.text(
-        or_label[0],
-        or_label[1],
-        "Ordinate",
-        fontsize=14,
-        rotation=np.rad2deg(theta_or),
-        rotation_mode="anchor",
-    )
-    plt.text(
-        origin[0] - 0.15,
-        origin[1] + 0.2,
-        "$O$",
-        fontsize=14,
-    )
+    # Get the median of each bin along the abscissa
 
-    plt.xlabel("$G_{BP} - G_{RP}$")
-    plt.ylabel("$G$")
-    ymin, ymax = plt.ylim()
-    plt.ylim(ymax, ymin)
+    # Fit a cubic spline to the median values
 
-    plt.text(
-        origin[0],
-        ymin + 0.5,
-        object_name.replace("_", " "),
-        fontsize=14,
-    )
-
-    plt.gca().set_aspect("equal")
-    plt.show()
+    pass
+    
 
 
 if __name__ == "__main__":
 
     reddening_vector = (0.31, 0.59)
     origin = (0.36, 11.93)
+    msr = (0.2, 1.9, 11.5, 18.0)
     test_path = Config.TEST_DATA / "NGC_2099_.pkl"
     with open(str(test_path), "rb") as file:
         cmd_data = pickle.load(file)
-
-    plot_cmd(cmd_data, reddening_vector, origin, "NGC_2099")
     
-    rotated_data = differential_reddening(cmd_data, reddening_vector, origin)
+    rotated_data = linear_transformation(cmd_data, reddening_vector, origin)
