@@ -5,6 +5,8 @@ from astropy.table import Table
 import numpy as np
 import numpy.typing as npt
 import pickle
+from scipy import stats
+from scipy.interpolate import CubicSpline
 
 from src.settings import Config
 
@@ -15,7 +17,7 @@ def _cols2array(table: Table, columns: list[str]) -> np.ndarray:
     return np.array([table[col].data for col in columns])
 
 
-def differential_reddening(
+def apply_differential_reddening_correction(
     cmd_data: np.ndarray,
     reddening_vector: tuple[float, float],
     origin: tuple[float, float] | None,
@@ -71,14 +73,39 @@ def get_fiducial_line(
     step: float = 0.4,
 ) -> np.ndarray:
     """Get the fiducial line"""
+    
+    BIN_STEP = 0.4  # mag
+    
+    # Remmember (abscissa, ordinate)
+    # Check bad values
+    # bad_values = np.any(np.isnan(data), axis=0)
 
     # Bin data along the ordinate
+    min_ordinate, max_ordinate = np.nanmin(data[1]), np.nanmax(data[1])
+    print(f"Min ordinate: {min_ordinate:.2f}")
+    print(f"Max ordinate: {max_ordinate:.2f}")
+    
+    bins = np.arange(min_ordinate, max_ordinate+BIN_STEP, BIN_STEP)
 
     # Get the median of each bin along the abscissa
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.binned_statistic.html
+    bin_means, bin_edges, binnumber = stats.binned_statistic(data[1], data[0], statistic=np.nanmedian, bins=bins)
 
     # Fit a cubic spline to the median values
+    # cs = CubicSpline(x, y)  <-- return this
+    # xs = np.arange(-0.5, 9.6, 0.1)
+    # cs(xs)
+
+    # return CubicSpline(x, y)
 
     pass
+
+def get_delta_abscissa(data: np.ndarray, fiducial_line: CubicSpline) -> np.ndarray:
+    """Get the delta abscissa from the fiducial line"""
+
+    # Get the delta abscissa
+    delta_abscissa = fiducial_line(data[1]) - data[0]
+    return delta_abscissa
     
 
 
