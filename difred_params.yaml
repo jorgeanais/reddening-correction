@@ -1,0 +1,29 @@
+# - cluster_name: IC_2714
+# - cluster_name: Melotte_71
+# - cluster_name: NGC_1245
+# - cluster_name: NGC_1817
+- cluster_name: NGC_2099  # Cordoni's paper example
+  ms_region: [0.2, 1.9, 11.5, 18.0]
+  origin: [0.36, 11.93]
+  ref_stars_range: [0.1, 0.7]
+# - cluster_name: NGC_2360
+# - cluster_name: NGC_2818
+# - cluster_name: NGC_3114
+# - cluster_name: NGC_3532
+# - cluster_name: NGC_5822
+# - cluster_name: NGC_6705
+# - cluster_name: NGC_2287
+# - cluster_name: Collinder_110  # Jorge's selection from now on
+# - cluster_name: Collinder_463
+# - cluster_name: IC_4725
+# - cluster_name: NGC_1817
+# - cluster_name: NGC_2168
+# - cluster_name: NGC_2204
+# - cluster_name: NGC_2360
+# - cluster_name: NGC_2423 
+# - cluster_name: NGC_2447
+# - cluster_name: NGC_2506
+# - cluster_name: NGC_6134
+# - cluster_name: NGC_6259
+# - cluster_name: NGC_6494
+# - cluster_name: NGC_6940

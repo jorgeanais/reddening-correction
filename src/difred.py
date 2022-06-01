@@ -10,6 +10,8 @@ from scipy import stats
 from scipy.interpolate import CubicSpline
 from sklearn.neighbors import NearestNeighbors
 
+from src.models import StarCluster
+from src.param_loader import DifRedClusterParams
 from src.settings import Config
 
 
@@ -19,14 +21,28 @@ def _cols2array(table: Table, columns: list[str]) -> np.ndarray:
     return np.array([table[col].data for col in columns])
 
 
-def apply_differential_reddening_correction(
-    cmd_data: np.ndarray,
-    reddening_vector: tuple[float, float],
-    origin: tuple[float, float] | None,
-) -> np.ndarray:
+def apply_differential_reddening_correction() -> None:
+    """Apply Differential Reddening correction to all clusters."""
+
+    pass
+
+def differential_reddening_correction(
+    star_cluster: StarCluster,
+    difred_params: DifRedClusterParams,
+    epochs: int = 4,
+) -> None:
     """Differential Reddening correction"""
 
+    # Get params and data
+    ms_region = difred_params.ms_region
+    origin = difred_params.origin
+    ref_stars_range = difred_params.ref_stars_range
+
+    reddening_vector = _cols2array(star_cluster.paramtable, ["E(GBP - GRP)", "A_G"])
+    cluster_data = star_cluster.membertable
+
     # Get reference frame
+
 
     # Generation of fiducial line
 
@@ -132,6 +148,7 @@ def diffred_estimation(table: Table, k: float = 35) -> np.ndarray:
     return np.nanmedian(np.take(delta_abscissa, indxs), axis=1)
 
 
+
 if __name__ == "__main__":
 
     reddening_vector = (0.31, 0.59)
@@ -144,3 +161,4 @@ if __name__ == "__main__":
     rotated_data = linear_transformation(cmd_data, origin, reddening_vector)
     fiducial_line = get_fiducial_line(rotated_data)
     delta_abscissa = get_delta_abscissa(rotated_data, fiducial_line)
+
