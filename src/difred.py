@@ -13,6 +13,7 @@ from tqdm import tqdm
 from src.models import StarCluster
 from src.param_loader import DifRedClusterParams
 from src.settings import Config
+from src.plots import plot_cmd_reddening_vector, plot_rotated_cmd
 
 
 def _cols2array(table: Table, columns: list[str]) -> np.ndarray:
@@ -76,6 +77,7 @@ def differential_reddening_correction(
     cmd_data = _cols2array(membertable, ["BP-RP", "Gmag"])
     ms_data = replace_points_outside_rectangle_region_with_nan(cmd_data, ms_region)
     membertable = _append_array_to_table(membertable, ms_data, ["ms_BP-RP", "ms_Gmag"])
+    plot_cmd_reddening_vector(cmd_data, ms_data, origin, reddening_vector, star_cluster.name)
 
     # Apply linear transformation
     rotated_data = linear_transformation(ms_data, origin, reddening_vector)
@@ -85,6 +87,7 @@ def differential_reddening_correction(
 
     # Generation of fiducial line
     fiducial_line = get_fiducial_line(rotated_data)
+    plot_rotated_cmd(rotated_data, fiducial_line, star_cluster.name)
 
     # Δ abscissa from fiducial line
     delta_abscissa = get_delta_abscissa(rotated_data, fiducial_line)
@@ -119,7 +122,8 @@ def replace_points_outside_rectangle_region_with_nan(
     limits: tuple[float, float, float, float],
 ) -> np.ndarray:
     """Replace points that are outside a predefined rectangular region with NaN"""
-
+    
+    data = data.copy()
     x1, x2, y1, y2 = limits
     above_inf = np.all(data >= np.array([[x1], [y1]]), axis=0)
     below_sup = np.all(data <= np.array([[x2], [y2]]), axis=0)
@@ -150,7 +154,7 @@ def linear_transformation(
 def get_fiducial_line(
     data: np.ndarray,
     step: float = 0.4,
-) -> np.ndarray:
+) -> CubicSpline:
     """Get the fiducial line of MS stars along the rotated CMD"""
 
     BIN_STEP = 0.4  # mag

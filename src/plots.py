@@ -1,6 +1,64 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import CubicSpline
+
+from src.settings import Config
+
+def plot_cmd_reddening_vector(
+    all_data: np.ndarray,
+    ms_data: np.ndarray,
+    origin: tuple[float, float],
+    reddening_vector: tuple[float, float],
+    object_name: str,
+) -> None:
+    """Plot CMD with reddening vector"""
+
+    # Plot CMD
+    plt.figure(figsize=(6, 10))
+    plt.scatter(all_data[0], all_data[1], s=10, alpha=0.3, label="All")
+    plt.scatter(ms_data[0], ms_data[1], s=12, alpha=0.5, label="MS selection")
+    plt.quiver(
+        origin[0],
+        origin[1],
+        reddening_vector[0],
+        reddening_vector[1],
+        angles="xy",
+        scale_units="xy",
+        scale=1,
+        width=0.03,
+        color="red",
+        zorder=10,
+    )
+    plt.title(f"CMD {object_name}")
+    plt.xlabel("$G_{BP} - G_{RP}$")
+    plt.ylabel("G")
+    plt.legend()
+    plt.gca().set_aspect("equal")
+    fname = Config.PLOTDIR / f"{object_name}_cmd_reddening_vector.png"
+    plt.savefig(fname)
+    plt.clf()
 
 
+def plot_rotated_cmd(
+    rot_data: np.ndarray,
+    fiducial_line: CubicSpline,
+    object_name: str,
+) -> None:
+    """Plot rotated CMD"""
+    plt.scatter(rot_data[0], rot_data[1], s=10, alpha=0.3, label="Rotated data")
+    # TODO: include fiducial line in the plot
+
+    plt.title(f"Rotated CMD {object_name}")
+    plt.legend()
+    plt.gca().set_aspect("equal")
+    plt.xlabel("Abscissa")
+    plt.ylabel("Ordinate")
+    fname = Config.PLOTDIR / f"{object_name}_rotated_cmd.png"
+    plt.savefig(fname)
+
+    
+
+# Deprecated
 def plot_cmd(
     cmd_data: np.ndarray,
     reddening_vector: tuple[float, float],
@@ -8,8 +66,6 @@ def plot_cmd(
     object_name: str,
 ) -> None:
     """Plot CMD"""
-
-    import matplotlib.pyplot as plt
 
     dpi = 60
     plt.figure(figsize=(920 / dpi, 720 / dpi), dpi=dpi)
