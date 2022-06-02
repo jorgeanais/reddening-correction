@@ -41,7 +41,7 @@ def plot_cmd_reddening_vector(
     plt.ylabel("G")
     plt.legend()
     plt.gca().set_aspect("equal")
-    fname = Config.PLOTDIR / f"{object_name}_cmd_reddening_vector.pdf"
+    fname = Config.PLOTDIR / f"{object_name}_cmd_reddening_vector.png"
     plt.savefig(fname)
     plt.clf()
 
@@ -68,7 +68,7 @@ def plot_dereddened_cmd(
     plt.ylabel("G")
     plt.legend()
     #plt.gca().set_aspect("equal")
-    fname = Config.PLOTDIR / f"{object_name}_dereddened_cmd.pdf"
+    fname = Config.PLOTDIR / f"{object_name}_dereddened_cmd.png"
     plt.savefig(fname)
     plt.clf()
 
@@ -78,13 +78,14 @@ def plot_rotated_cmd(
     fiducial_line: CubicSpline,
     ref_stars_range: tuple[float, float],
     object_name: str,
+    epoch: int = 3,
 ) -> None:
     """Plot rotated CMD"""
 
     abscissa = table["abscissa"]
     ordinate = table["ordinate"]
-    delta_abscissa = table["delta_abscissa"]
-    refstars_mask = table["ref_stars"]
+    delta_abscissa = table[f"delta_abscissa_{epoch}"]
+    refstars_mask = table[f"ref_stars_{epoch}"]
     print(np.sum(refstars_mask))
 
     # Rotated MS
@@ -109,6 +110,7 @@ def plot_rotated_cmd(
     plt.legend()
     plt.xlabel("Abscissa")
     plt.ylabel("Ordinate")
+    plt.xlim(-1.0, 7.0)  # TODO: remove limits
 
     # Delta abscissa ----------------
     plt.subplot(122, sharey=ax)
@@ -126,8 +128,9 @@ def plot_rotated_cmd(
 
     plt.legend()
     plt.xlabel("$\Delta$ Abscissa")
+    plt.xlim(-2.0, 1.0)  # TODO: remove limits
 
-    fname = Config.PLOTDIR / f"{object_name}_rotated_cmd.pdf"
+    fname = Config.PLOTDIR / f"{object_name}_rotated_cmd_e{epoch}.png"
     plt.savefig(fname)
 
 

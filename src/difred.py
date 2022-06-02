@@ -47,7 +47,7 @@ def apply_differential_reddening_correction(
 
     print("Appling differential reddening correction...")
     results = []
-    for drparams in tqdm(drpl):
+    for drparams in drpl:
         cl = clusters[drparams.cluster_name]
         r = differential_reddening_correction(cl, drparams)
         results.append(r)
@@ -58,7 +58,7 @@ def apply_differential_reddening_correction(
 def differential_reddening_correction(
     star_cluster: StarCluster,
     drparams: DifRedClusterParams,
-    epochs: int = 4,
+    epochs: int = 30,
 ) -> Table:
     """Differential Reddening correction workflow"""
 
@@ -85,26 +85,33 @@ def differential_reddening_correction(
         membertable, rotated_data, ["abscissa", "ordinate"]
     )
 
-    # Generation of fiducial line
-    fiducial_line = get_fiducial_line(rotated_data)
+    for epoch in range(epochs):
+        
+        print(f"Epoch: {epoch}")
+        
+        # Generation of fiducial line
+        fiducial_line = get_fiducial_line(rotated_data)
 
-    # Δ abscissa from fiducial line
-    delta_abscissa = get_delta_abscissa(rotated_data, fiducial_line)
-    membertable = _append_array_to_table(
-        membertable, delta_abscissa, ["delta_abscissa"]
-    )
+        # Δ abscissa from fiducial line
+        delta_abscissa = get_delta_abscissa(rotated_data, fiducial_line)
+        membertable = _append_array_to_table(
+            membertable, delta_abscissa, [f"delta_abscissa_{epoch}"]
+        )
 
-    # Selection of reference stars
-    ref_stars = get_points_within_range(rotated_data[1], ref_stars_range)
-    membertable = _append_array_to_table(membertable, ref_stars, ["ref_stars"])
-    plot_rotated_cmd(membertable, fiducial_line, ref_stars_range, star_cluster.name)
+        # Selection of reference stars
+        ref_stars = get_points_within_range(rotated_data[1], ref_stars_range)
+        membertable = _append_array_to_table(membertable, ref_stars, [f"ref_stars_{epoch}"])
+        plot_rotated_cmd(membertable, fiducial_line, ref_stars_range, star_cluster.name, epoch)
 
-    # Estimation of differential extinction
-    abscissa_corrected = diffred_estimation(membertable)
+        # Estimation of differential extinction
+        abscissa_corrected = diffred_estimation(membertable, epoch)
+
+        rotated_data = np.array([abscissa_corrected, rotated_data[1]])
+
 
     # Back to original coordinates
     dereddened_cmd = linear_transformation(
-        np.array([abscissa_corrected, rotated_data[1]]),
+        rotated_data,
         origin,
         reddening_vector,
         inverse=True,
@@ -219,7 +226,7 @@ def get_delta_abscissa(data: np.ndarray, fiducial_line: CubicSpline) -> np.ndarr
     return delta_abscissa
 
 
-def diffred_estimation(table: Table, k: float = 35) -> np.ndarray:
+def diffred_estimation(table: Table, epoch: int, k: float = 35) -> np.ndarray:
     """Get the median color residual along the reddening vector (Δ abscissa) from k nearest neighbors"""
 
     # from sklearn.metrics import pairwise_distances
@@ -232,7 +239,7 @@ def diffred_estimation(table: Table, k: float = 35) -> np.ndarray:
     # Get coordinates
     coords = np.deg2rad(_cols2array(table, ["RA_ICRS", "DE_ICRS"]))
 
-    reference_star_table = table[table["ref_stars"]]
+    reference_star_table = table[table[f"ref_stars_{epoch}"]]
     coords_ref_stars = np.deg2rad(
         _cols2array(reference_star_table, ["RA_ICRS", "DE_ICRS"])
     )
@@ -242,9 +249,10 @@ def diffred_estimation(table: Table, k: float = 35) -> np.ndarray:
     indxs = nn.kneighbors(coords.T, return_distance=False)
 
     # Get median Δ abscissa values from k nearest reference stars
-    delta_abscissa = _cols2array(reference_star_table, ["delta_abscissa"])
+    delta_abscissa = _cols2array(reference_star_table, [f"delta_abscissa_{epoch}"])
     median_delta_abscissa = np.nanmedian(np.take(delta_abscissa, indxs), axis=1)
     table["difredest"] = median_delta_abscissa
+    print("Average Δ median abscissa: ", np.mean(median_delta_abscissa))
     abscissa_corrected = table["abscissa"] - median_delta_abscissa
     table["abscissa_corrected"] = abscissa_corrected
 
