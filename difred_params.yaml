@@ -5,7 +5,7 @@
 - cluster_name: NGC_2099  # Cordoni's paper example
   ms_region: [0.2, 1.9, 11.5, 18.0]
   origin: [0.36, 11.93]
-  ref_stars_range: [-100., 100.]
+  ref_stars_range: [0.1, 0.7]
 # - cluster_name: NGC_2360
 # - cluster_name: NGC_2818
 # - cluster_name: NGC_3114

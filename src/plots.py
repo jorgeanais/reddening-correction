@@ -1,22 +1,29 @@
 import numpy as np
 import matplotlib.pyplot as plt
+
+from astropy.table import Table
 from scipy.interpolate import CubicSpline
 
 from src.settings import Config
 
+
 def plot_cmd_reddening_vector(
-    all_data: np.ndarray,
-    ms_data: np.ndarray,
+    table: Table,
     origin: tuple[float, float],
     reddening_vector: tuple[float, float],
     object_name: str,
 ) -> None:
     """Plot CMD with reddening vector"""
 
+    color = table["BP-RP"]
+    magnitude = table["Gmag"]
+    ms_color = table["ms_BP-RP"]
+    ms_magnitude = table["ms_Gmag"]
+
     # Plot CMD
     plt.figure(figsize=(6, 10))
-    plt.scatter(all_data[0], all_data[1], s=10, alpha=0.3, label="All")
-    plt.scatter(ms_data[0], ms_data[1], s=12, alpha=0.5, label="MS selection")
+    plt.scatter(color, magnitude, c="C1", s=10, alpha=0.3, label="All")
+    plt.scatter(ms_color, ms_magnitude, c="C0", s=12, alpha=0.5, label="MS selection")
     plt.quiver(
         origin[0],
         origin[1],
@@ -34,32 +41,98 @@ def plot_cmd_reddening_vector(
     plt.ylabel("G")
     plt.legend()
     plt.gca().set_aspect("equal")
-    fname = Config.PLOTDIR / f"{object_name}_cmd_reddening_vector.png"
+    fname = Config.PLOTDIR / f"{object_name}_cmd_reddening_vector.pdf"
+    plt.savefig(fname)
+    plt.clf()
+
+
+def plot_dereddened_cmd(
+    table: Table,
+    object_name: str,
+) -> None:
+    """Plot CMD with reddening vector"""
+
+    color = table["BP-RP"]
+    magnitude = table["Gmag"]
+    color_dered = table["BP-RP_dered"]
+    magnitude_dered = table["Gmag_dered"]
+
+    # Plot CMD
+    plt.figure(figsize=(6, 10))
+    plt.scatter(color, magnitude, c="C3", s=10, alpha=0.3, label="original")
+    plt.scatter(
+        color_dered, magnitude_dered, c="C0", s=10, alpha=0.3, label="dereddened"
+    )
+    plt.title(f"De-reddended CMD {object_name}")
+    plt.xlabel("$G_{BP} - G_{RP}$")
+    plt.ylabel("G")
+    plt.legend()
+    #plt.gca().set_aspect("equal")
+    fname = Config.PLOTDIR / f"{object_name}_dereddened_cmd.pdf"
     plt.savefig(fname)
     plt.clf()
 
 
 def plot_rotated_cmd(
-    rot_data: np.ndarray,
+    table: Table,
     fiducial_line: CubicSpline,
+    ref_stars_range: tuple[float, float],
     object_name: str,
 ) -> None:
     """Plot rotated CMD"""
-    plt.scatter(rot_data[0], rot_data[1], s=10, alpha=0.3, label="Rotated data")
-    # TODO: include fiducial line in the plot
 
-    plt.title(f"Rotated CMD {object_name}")
+    abscissa = table["abscissa"]
+    ordinate = table["ordinate"]
+    delta_abscissa = table["delta_abscissa"]
+    refstars_mask = table["ref_stars"]
+    print(np.sum(refstars_mask))
+
+    # Rotated MS
+    plt.figure(figsize=(10, 8))
+    plt.suptitle(f"Rotated CMD {object_name}")
+
+    # Rotated CMD ----------------
+    ax = plt.subplot(121)
+    plt.scatter(abscissa, ordinate, s=10, alpha=0.3, label="MS selection")
+    plt.scatter(
+        abscissa[refstars_mask],
+        ordinate[refstars_mask],
+        s=10,
+        alpha=0.5,
+        label="Reference stars",
+    )
+
+    # Fiducial line
+    ys = np.linspace(np.nanmin(ordinate), np.nanmax(ordinate), 100)
+    plt.plot(fiducial_line(ys), ys, label="Fiducial line", zorder=10, c="red")
+
     plt.legend()
-    plt.gca().set_aspect("equal")
     plt.xlabel("Abscissa")
     plt.ylabel("Ordinate")
-    fname = Config.PLOTDIR / f"{object_name}_rotated_cmd.png"
+
+    # Delta abscissa ----------------
+    plt.subplot(122, sharey=ax)
+    plt.scatter(delta_abscissa, ordinate, s=10, alpha=0.3, label="MS selection")
+    plt.scatter(
+        delta_abscissa[refstars_mask],
+        ordinate[refstars_mask],
+        s=10,
+        alpha=0.5,
+        label="Reference stars",
+    )
+    plt.axvline(x=0.00, c="grey", linestyle="--", alpha=0.5)
+    plt.axhline(y=ref_stars_range[0], color="grey", linestyle="--", alpha=0.5)
+    plt.axhline(y=ref_stars_range[1], color="grey", linestyle="--", alpha=0.5)
+
+    plt.legend()
+    plt.xlabel("$\Delta$ Abscissa")
+
+    fname = Config.PLOTDIR / f"{object_name}_rotated_cmd.pdf"
     plt.savefig(fname)
 
-    
 
 # Deprecated
-def plot_cmd(
+def _plot_cmd(
     cmd_data: np.ndarray,
     reddening_vector: tuple[float, float],
     origin: tuple[float, float],

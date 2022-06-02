@@ -13,7 +13,7 @@ from tqdm import tqdm
 from src.models import StarCluster
 from src.param_loader import DifRedClusterParams
 from src.settings import Config
-from src.plots import plot_cmd_reddening_vector, plot_rotated_cmd
+from src.plots import plot_cmd_reddening_vector, plot_rotated_cmd, plot_dereddened_cmd
 
 
 def _cols2array(table: Table, columns: list[str]) -> np.ndarray:
@@ -77,7 +77,7 @@ def differential_reddening_correction(
     cmd_data = _cols2array(membertable, ["BP-RP", "Gmag"])
     ms_data = replace_points_outside_rectangle_region_with_nan(cmd_data, ms_region)
     membertable = _append_array_to_table(membertable, ms_data, ["ms_BP-RP", "ms_Gmag"])
-    plot_cmd_reddening_vector(cmd_data, ms_data, origin, reddening_vector, star_cluster.name)
+    plot_cmd_reddening_vector(membertable, origin, reddening_vector, star_cluster.name)
 
     # Apply linear transformation
     rotated_data = linear_transformation(ms_data, origin, reddening_vector)
@@ -87,7 +87,6 @@ def differential_reddening_correction(
 
     # Generation of fiducial line
     fiducial_line = get_fiducial_line(rotated_data)
-    plot_rotated_cmd(rotated_data, fiducial_line, star_cluster.name)
 
     # Δ abscissa from fiducial line
     delta_abscissa = get_delta_abscissa(rotated_data, fiducial_line)
@@ -96,11 +95,25 @@ def differential_reddening_correction(
     )
 
     # Selection of reference stars
-    ref_stars = get_points_within_range(rotated_data, ref_stars_range)
+    ref_stars = get_points_within_range(rotated_data[1], ref_stars_range)
     membertable = _append_array_to_table(membertable, ref_stars, ["ref_stars"])
+    plot_rotated_cmd(membertable, fiducial_line, ref_stars_range, star_cluster.name)
 
     # Estimation of differential extinction
-    diffred_estimation(membertable)
+    abscissa_corrected = diffred_estimation(membertable)
+
+    # Back to original coordinates
+    dereddened_cmd = linear_transformation(
+        np.array([abscissa_corrected, rotated_data[1]]),
+        origin,
+        reddening_vector,
+        inverse=True,
+    )
+    membertable = _append_array_to_table(
+        membertable, dereddened_cmd, ["BP-RP_dered", "Gmag_dered"]
+    )
+
+    plot_dereddened_cmd(membertable, star_cluster.name)
 
     return membertable
 
@@ -122,7 +135,7 @@ def replace_points_outside_rectangle_region_with_nan(
     limits: tuple[float, float, float, float],
 ) -> np.ndarray:
     """Replace points that are outside a predefined rectangular region with NaN"""
-    
+
     data = data.copy()
     x1, x2, y1, y2 = limits
     above_inf = np.all(data >= np.array([[x1], [y1]]), axis=0)
@@ -136,6 +149,7 @@ def linear_transformation(
     data: np.ndarray,
     origin: tuple[float, float],
     vector: tuple[float, float],
+    inverse: bool = False,
 ) -> np.ndarray:
     """Perform translation and rotation according to an origin point and vector angle"""
 
@@ -144,11 +158,20 @@ def linear_transformation(
 
     # CMD Rotation
     rot_angle = -np.arctan(vector[1] / vector[0])
+
+    if inverse:
+        rot_angle = -rot_angle
+
     print(f"Rotation angle: {np.rad2deg(rot_angle):.1f}°")
     c, s = np.cos(rot_angle), np.sin(rot_angle)
     rotation_matrix = np.array([[c, -s], [s, c]])
 
-    return rotation_matrix @ (data - o)
+    if inverse:
+        result = rotation_matrix @ data + o
+    else:    
+        result = rotation_matrix @ (data - o)
+
+    return result
 
 
 def get_fiducial_line(
@@ -222,7 +245,10 @@ def diffred_estimation(table: Table, k: float = 35) -> np.ndarray:
     delta_abscissa = _cols2array(reference_star_table, ["delta_abscissa"])
     median_delta_abscissa = np.nanmedian(np.take(delta_abscissa, indxs), axis=1)
     table["difredest"] = median_delta_abscissa
-    table["abscissa_corrected"] = table["abscissa"] - median_delta_abscissa
+    abscissa_corrected = table["abscissa"] - median_delta_abscissa
+    table["abscissa_corrected"] = abscissa_corrected
+
+    return abscissa_corrected.data
 
 
 if __name__ == "__main__":
