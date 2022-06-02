@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def plot_cmd(
     cmd_data: np.ndarray,
     reddening_vector: tuple[float, float],

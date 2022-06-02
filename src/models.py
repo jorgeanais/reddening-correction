@@ -7,7 +7,7 @@ from astropy import table
 
 @dataclass(frozen=True, slots=True)
 class StarCluster:
-    """A Star Cluster representation."""    
+    """A Star Cluster representation."""
 
     name: str
     coordinates: SkyCoord = field(repr=False)

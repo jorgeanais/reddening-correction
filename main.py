@@ -4,18 +4,24 @@ from src.redcor import apply_reddening_correction
 from src.difred import apply_differential_reddening_correction
 
 def main():
+    # Load data from catalogs
     dl = DataLoader()
     catalogs = dl.run()
     clusters = {k: v for c in catalogs for k, v in c.get_all_clusters().items()}
+
+    # Get reddening info
     apply_reddening_correction(clusters)
 
-    # Differential reddening
+    # Get Differential reddening params
     pl = DifRedParamLoader()
-    cluster_selection = pl.run()
+    difred_params = pl.run()
 
-    return catalogs, clusters, cluster_selection
+    # Apply Differential Reddening correction
+    corrected = apply_differential_reddening_correction(difred_params, clusters)
+
+    return catalogs, clusters, difred_params, corrected
 
 
 
 if __name__ == "__main__":
-    catalogs, clusters, cluster_selection = main()
+    catalogs, clusters, difred_params, corrected = main()
