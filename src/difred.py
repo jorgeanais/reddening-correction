@@ -1,14 +1,11 @@
-"""
-https://numpy.org/doc/stable/reference/typing.html#module-numpy.typing
-"""
 from astropy.table import Table, hstack
 import numpy as np
 import pickle
 
+from astropy.stats import sigma_clip
 from scipy import stats
 from scipy.interpolate import CubicSpline
 from sklearn.neighbors import NearestNeighbors
-from tqdm import tqdm
 
 from src.models import StarCluster
 from src.param_loader import DifRedClusterParams
@@ -33,17 +30,28 @@ def _append_array_to_table(
     table: Table,
     array: np.ndarray,
     columns: list[str],
+    epoch: int | None = None,
 ) -> Table:
-    """Append an array to an astropy table"""
+    """Append an array to an astropy table. If epoch is given, then column name are renamed: colname_epoch"""
 
+    if epoch is not None:
+        columns = [c + f"_{epoch}" for c in columns]
     return hstack([table, _array2cols(array, columns)])
 
+
+def _sigmaclip_median(array: np.ndarray) -> float:
+    """Get the median of a data array, removing outliers"""
+    
+    x = array.copy()
+    x = x[~np.isnan(x)]
+    clipped = sigma_clip(x, cenfunc='median', stdfunc="mad_std", masked=False)
+    return np.median(clipped)
 
 def apply_differential_reddening_correction(
     drpl: list[DifRedClusterParams],
     clusters: dict[str, StarCluster],
 ) -> list[Table]:
-    """Apply Differential Reddening correction to all clusters defined in a list."""
+    """Apply Differential Reddening correction to all clusters defined in a list"""
 
     print("Appling differential reddening correction...")
     results = []
@@ -58,7 +66,7 @@ def apply_differential_reddening_correction(
 def differential_reddening_correction(
     star_cluster: StarCluster,
     drparams: DifRedClusterParams,
-    epochs: int = 30,
+    epochs: int = 12,
 ) -> Table:
     """Differential Reddening correction workflow"""
 
@@ -72,46 +80,56 @@ def differential_reddening_correction(
 
     # Get cluster's data (astropy table)
     membertable = star_cluster.membertable.copy()
+    plot_cmd_reddening_vector(star_cluster.membertable, origin, reddening_vector, star_cluster.name)
 
     # Select only data from stars within the MS CMD region
     cmd_data = _cols2array(membertable, ["BP-RP", "Gmag"])
     ms_data = replace_points_outside_rectangle_region_with_nan(cmd_data, ms_region)
     membertable = _append_array_to_table(membertable, ms_data, ["ms_BP-RP", "ms_Gmag"])
-    plot_cmd_reddening_vector(membertable, origin, reddening_vector, star_cluster.name)
 
     # Apply linear transformation
-    rotated_data = linear_transformation(ms_data, origin, reddening_vector)
+    abs_ord_data = linear_transformation(ms_data, origin, reddening_vector)
     membertable = _append_array_to_table(
-        membertable, rotated_data, ["abscissa", "ordinate"]
+        membertable,
+        abs_ord_data,
+        ["abscissa", "ordinate"],
+        epoch=0,
     )
 
     for epoch in range(epochs):
-        
-        print(f"Epoch: {epoch}")
-        
-        # Generation of fiducial line
-        fiducial_line = get_fiducial_line(rotated_data)
 
-        # Δ abscissa from fiducial line
-        delta_abscissa = get_delta_abscissa(rotated_data, fiducial_line)
+        print(f"Epoch: {epoch}")
+
+        # Fit fiducial line
+        fiducial_line, _, _ = fit_fiducial_line(abs_ord_data)
+
+        # Get `Δ abscissa` from fiducial line
+        delta_abscissa = get_delta_abscissa(abs_ord_data, fiducial_line)
         membertable = _append_array_to_table(
-            membertable, delta_abscissa, [f"delta_abscissa_{epoch}"]
+            membertable, delta_abscissa, ["delta_abscissa"], epoch
         )
 
         # Selection of reference stars
-        ref_stars = get_points_within_range(rotated_data[1], ref_stars_range)
-        membertable = _append_array_to_table(membertable, ref_stars, [f"ref_stars_{epoch}"])
-        plot_rotated_cmd(membertable, fiducial_line, ref_stars_range, star_cluster.name, epoch)
+        ref_stars = get_points_within_range(abs_ord_data[1], ref_stars_range)
+        membertable = _append_array_to_table(
+            membertable, ref_stars, ["ref_stars"], epoch
+        )
 
         # Estimation of differential extinction
         abscissa_corrected = diffred_estimation(membertable, epoch)
 
-        rotated_data = np.array([abscissa_corrected, rotated_data[1]])
+        abs_ord_data = np.array([abscissa_corrected, abs_ord_data[1]])
+        membertable = _append_array_to_table(
+            membertable, abs_ord_data, ["abscissa", "ordinate"], epoch + 1
+        )
 
+        plot_rotated_cmd(
+            membertable, fiducial_line, ref_stars_range, star_cluster.name, epoch
+        )
 
     # Back to original coordinates
     dereddened_cmd = linear_transformation(
-        rotated_data,
+        abs_ord_data,
         origin,
         reddening_vector,
         inverse=True,
@@ -141,7 +159,7 @@ def replace_points_outside_rectangle_region_with_nan(
     data: np.ndarray,
     limits: tuple[float, float, float, float],
 ) -> np.ndarray:
-    """Replace points that are outside a predefined rectangular region with NaN"""
+    """Replace points that are outside a predefined rectangular region with NaNs"""
 
     data = data.copy()
     x1, x2, y1, y2 = limits
@@ -175,55 +193,40 @@ def linear_transformation(
 
     if inverse:
         result = rotation_matrix @ data + o
-    else:    
+    else:
         result = rotation_matrix @ (data - o)
 
     return result
 
 
-def get_fiducial_line(
+def fit_fiducial_line(
     data: np.ndarray,
-    step: float = 0.4,
-) -> CubicSpline:
+    bin_width: float = 0.4,
+) -> tuple[CubicSpline, np.ndarray, np.ndarray]:
     """Get the fiducial line of MS stars along the rotated CMD"""
 
-    BIN_STEP = 0.4  # mag
 
-    # Remmember (abscissa, ordinate)
-    # Check bad values
-    # bad_values = np.any(np.isnan(data), axis=0)
-
-    # Bin data along the ordinate
+    # Bin data along the ordinate (y axis)
     min_ordinate, max_ordinate = np.nanmin(data[1]), np.nanmax(data[1])
-    print(f"Min ordinate: {min_ordinate:.2f}")
-    print(f"Max ordinate: {max_ordinate:.2f}")
-
-    bins_ordinate = np.arange(min_ordinate, max_ordinate + BIN_STEP, BIN_STEP)
+    bins_ordinate = np.arange(min_ordinate, max_ordinate + bin_width, bin_width)
 
     # Get the median of each bin along the abscissa and ordinate axis
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.binned_statistic.html
-    median_abscissa, _edges, _number = stats.binned_statistic(
-        data[1], data[0], statistic=np.nanmedian, bins=bins_ordinate
-    )
-    median_ordinate, _edges, _number = stats.binned_statistic(
-        data[1], data[1], statistic=np.nanmedian, bins=bins_ordinate
+    median_abscissa, _, _ = stats.binned_statistic(
+        data[1], data[0], statistic=_sigmaclip_median, bins=bins_ordinate
     )
 
-    # Fit a cubic spline to the median values
-    # cs = CubicSpline(x, y)  <-- return this
-    # xs = np.arange(-0.5, 9.6, 0.1)
-    # cs(xs)
+    median_ordinate, _, _ = stats.binned_statistic(
+        data[1], data[1], statistic=_sigmaclip_median, bins=bins_ordinate
+    )
 
     # Notice that we want the abscissa value as function of the ordinate value (x = x(y))
-    return CubicSpline(median_ordinate, median_abscissa)
+    return CubicSpline(median_ordinate, median_abscissa), median_abscissa, median_ordinate
 
 
 def get_delta_abscissa(data: np.ndarray, fiducial_line: CubicSpline) -> np.ndarray:
-    """Get the delta abscissa from the fiducial line"""
+    """Get the distance `Δ abscissa` from the fiducial line along the reddening direction"""
 
-    # Get the delta abscissa
-    delta_abscissa = fiducial_line(data[1]) - data[0]
-    return delta_abscissa
+    return data[0] - fiducial_line(data[1])
 
 
 def diffred_estimation(table: Table, epoch: int, k: float = 35) -> np.ndarray:
@@ -246,28 +249,16 @@ def diffred_estimation(table: Table, epoch: int, k: float = 35) -> np.ndarray:
 
     # Find k-nearest reference stars
     nn = NearestNeighbors(n_neighbors=k, metric="haversine").fit(coords_ref_stars.T)
-    indxs = nn.kneighbors(coords.T, return_distance=False)
+    ang_dist, indxs = nn.kneighbors(coords.T, return_distance=True)
+    ang_dist = np.rad2deg(ang_dist)
 
     # Get median Δ abscissa values from k nearest reference stars
     delta_abscissa = _cols2array(reference_star_table, [f"delta_abscissa_{epoch}"])
     median_delta_abscissa = np.nanmedian(np.take(delta_abscissa, indxs), axis=1)
     table["difredest"] = median_delta_abscissa
     print("Average Δ median abscissa: ", np.mean(median_delta_abscissa))
-    abscissa_corrected = table["abscissa"] - median_delta_abscissa
+    abscissa_corrected = table[f"abscissa_{epoch}"] - median_delta_abscissa
     table["abscissa_corrected"] = abscissa_corrected
 
     return abscissa_corrected.data
 
-
-if __name__ == "__main__":
-
-    reddening_vector = (0.31, 0.59)
-    origin = (0.36, 11.93)
-    msr = (0.2, 1.9, 11.5, 18.0)
-    test_path = Config.TEST_DATA / "NGC_2099_.pkl"
-    with open(str(test_path), "rb") as file:
-        cmd_data = pickle.load(file)
-
-    rotated_data = linear_transformation(cmd_data, origin, reddening_vector)
-    fiducial_line = get_fiducial_line(rotated_data)
-    delta_abscissa = get_delta_abscissa(rotated_data, fiducial_line)

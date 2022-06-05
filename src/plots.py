@@ -78,19 +78,19 @@ def plot_rotated_cmd(
     fiducial_line: CubicSpline,
     ref_stars_range: tuple[float, float],
     object_name: str,
-    epoch: int = 3,
+    epoch: int,
 ) -> None:
     """Plot rotated CMD"""
 
-    abscissa = table["abscissa"]
-    ordinate = table["ordinate"]
+    abscissa = table[f"abscissa_{epoch}"]
+    ordinate = table[f"ordinate_{epoch}"]
     delta_abscissa = table[f"delta_abscissa_{epoch}"]
     refstars_mask = table[f"ref_stars_{epoch}"]
     print(np.sum(refstars_mask))
 
     # Rotated MS
     plt.figure(figsize=(10, 8))
-    plt.suptitle(f"Rotated CMD {object_name}")
+    plt.suptitle(f"Rotated CMD {object_name} epoch {epoch}")
 
     # Rotated CMD ----------------
     ax = plt.subplot(121)
