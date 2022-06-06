@@ -5,6 +5,7 @@ import pickle
 from astropy.stats import sigma_clip
 from scipy import stats
 from scipy.interpolate import CubicSpline
+from sklearn import neighbors
 from sklearn.neighbors import NearestNeighbors
 
 from src.models import StarCluster
@@ -41,11 +42,14 @@ def _append_array_to_table(
 
 def _sigmaclip_median(array: np.ndarray) -> float:
     """Get the median of a data array, removing outliers"""
-    
+
     x = array.copy()
     x = x[~np.isnan(x)]
-    clipped = sigma_clip(x, cenfunc='median', stdfunc="mad_std", masked=False)
+    clipped = sigma_clip(
+        x, sigma_lower=4, sigma_upper=2, cenfunc="median", masked=False
+    )
     return np.median(clipped)
+
 
 def apply_differential_reddening_correction(
     drpl: list[DifRedClusterParams],
@@ -66,7 +70,7 @@ def apply_differential_reddening_correction(
 def differential_reddening_correction(
     star_cluster: StarCluster,
     drparams: DifRedClusterParams,
-    epochs: int = 12,
+    epochs: int = 4,
 ) -> Table:
     """Differential Reddening correction workflow"""
 
@@ -80,15 +84,15 @@ def differential_reddening_correction(
 
     # Get cluster's data (astropy table)
     membertable = star_cluster.membertable.copy()
-    plot_cmd_reddening_vector(star_cluster.membertable, origin, reddening_vector, star_cluster.name)
 
     # Select only data from stars within the MS CMD region
     cmd_data = _cols2array(membertable, ["BP-RP", "Gmag"])
     ms_data = replace_points_outside_rectangle_region_with_nan(cmd_data, ms_region)
     membertable = _append_array_to_table(membertable, ms_data, ["ms_BP-RP", "ms_Gmag"])
+    plot_cmd_reddening_vector(membertable, origin, reddening_vector, star_cluster.name)
 
     # Apply linear transformation
-    abs_ord_data = linear_transformation(ms_data, origin, reddening_vector)
+    abs_ord_data = linear_transformation(cmd_data, origin, reddening_vector)
     membertable = _append_array_to_table(
         membertable,
         abs_ord_data,
@@ -96,12 +100,18 @@ def differential_reddening_correction(
         epoch=0,
     )
 
+    # Fit fiducial line
+    abs_ord_data_ms = linear_transformation(ms_data, origin, reddening_vector)
+    membertable = _append_array_to_table(
+        membertable,
+        abs_ord_data,
+        ["abscissa_ms", "ordinate_ms"]
+    )
+    fiducial_line, median_abscissa, median_ordinate = fit_fiducial_line(abs_ord_data_ms)
+
     for epoch in range(epochs):
 
         print(f"Epoch: {epoch}")
-
-        # Fit fiducial line
-        fiducial_line, _, _ = fit_fiducial_line(abs_ord_data)
 
         # Get `Δ abscissa` from fiducial line
         delta_abscissa = get_delta_abscissa(abs_ord_data, fiducial_line)
@@ -124,7 +134,13 @@ def differential_reddening_correction(
         )
 
         plot_rotated_cmd(
-            membertable, fiducial_line, ref_stars_range, star_cluster.name, epoch
+            membertable,
+            fiducial_line,
+            ref_stars_range,
+            median_abscissa,
+            median_ordinate,
+            star_cluster.name,
+            epoch,
         )
 
     # Back to original coordinates
@@ -201,26 +217,31 @@ def linear_transformation(
 
 def fit_fiducial_line(
     data: np.ndarray,
-    bin_width: float = 0.4,
+    bin_width: float = 0.1,
 ) -> tuple[CubicSpline, np.ndarray, np.ndarray]:
-    """Get the fiducial line of MS stars along the rotated CMD"""
-
+    """Get the fiducial line of MS stars along the rotated CMD applying a moving window"""
 
     # Bin data along the ordinate (y axis)
     min_ordinate, max_ordinate = np.nanmin(data[1]), np.nanmax(data[1])
-    bins_ordinate = np.arange(min_ordinate, max_ordinate + bin_width, bin_width)
+
+    # Compute shifted bins
+    bins_ordinate = np.arange(min_ordinate, max_ordinate, bin_width)
 
     # Get the median of each bin along the abscissa and ordinate axis
+    median_ordinate, _, _ = stats.binned_statistic(
+        data[1], data[1], statistic=np.nanmedian, bins=bins_ordinate
+    )
+
     median_abscissa, _, _ = stats.binned_statistic(
         data[1], data[0], statistic=_sigmaclip_median, bins=bins_ordinate
     )
 
-    median_ordinate, _, _ = stats.binned_statistic(
-        data[1], data[1], statistic=_sigmaclip_median, bins=bins_ordinate
+    # Notice that we want the abscissa value as function of the ordinate value
+    return (
+        CubicSpline(median_ordinate, median_abscissa),
+        median_abscissa,
+        median_ordinate,
     )
-
-    # Notice that we want the abscissa value as function of the ordinate value (x = x(y))
-    return CubicSpline(median_ordinate, median_abscissa), median_abscissa, median_ordinate
 
 
 def get_delta_abscissa(data: np.ndarray, fiducial_line: CubicSpline) -> np.ndarray:
@@ -250,15 +271,38 @@ def diffred_estimation(table: Table, epoch: int, k: float = 35) -> np.ndarray:
     # Find k-nearest reference stars
     nn = NearestNeighbors(n_neighbors=k, metric="haversine").fit(coords_ref_stars.T)
     ang_dist, indxs = nn.kneighbors(coords.T, return_distance=True)
-    ang_dist = np.rad2deg(ang_dist)
 
     # Get median Δ abscissa values from k nearest reference stars
     delta_abscissa = _cols2array(reference_star_table, [f"delta_abscissa_{epoch}"])
-    median_delta_abscissa = np.nanmedian(np.take(delta_abscissa, indxs), axis=1)
-    table["difredest"] = median_delta_abscissa
-    print("Average Δ median abscissa: ", np.mean(median_delta_abscissa))
+    neighbors_deltas = np.take(delta_abscissa, indxs)
+
+    # check that the distance to a reference star is less than X arcminutes
+    # ang_dist = np.rad2deg(ang_dist) * 60
+
+    # Replace with nan the values that are not nearby
+    # neighbors_deltas_n = np.where(ang_dist < 3.0, neighbors_deltas, np.nan)
+    # neighbors_deltas_n = np.where(ang_dist > 0.001, neighbors_deltas, np.nan)
+    # print("Avg. non nan values", np.mean(np.sum(~np.isnan(neighbors_deltas_n), axis=1)))
+
+    # median_delta_abscissa = np.nanmedian(neighbors_deltas, axis=1)
+    median_delta_abscissa = np.nanmedian(
+       sigma_clip(
+           neighbors_deltas,
+           sigma_lower=3,
+           sigma_upper=3,
+           cenfunc="median",
+           axis=1,
+           masked=False,
+       ),
+       axis=1,
+    )
+
+    # Replace nan values with 0
+    median_delta_abscissa = np.nan_to_num(median_delta_abscissa)
+
+    # Compute correction
+    table[f"median_delta_abscissa_{epoch}"] = median_delta_abscissa
     abscissa_corrected = table[f"abscissa_{epoch}"] - median_delta_abscissa
     table["abscissa_corrected"] = abscissa_corrected
 
     return abscissa_corrected.data
-

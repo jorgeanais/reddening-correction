@@ -1,3 +1,4 @@
+from turtle import color
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -77,6 +78,8 @@ def plot_rotated_cmd(
     table: Table,
     fiducial_line: CubicSpline,
     ref_stars_range: tuple[float, float],
+    median_abscissa: np.ndarray,
+    median_ordinate: np.ndarray,
     object_name: str,
     epoch: int,
 ) -> None:
@@ -89,12 +92,12 @@ def plot_rotated_cmd(
     print(np.sum(refstars_mask))
 
     # Rotated MS
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(12, 10))
     plt.suptitle(f"Rotated CMD {object_name} epoch {epoch}")
 
     # Rotated CMD ----------------
     ax = plt.subplot(121)
-    plt.scatter(abscissa, ordinate, s=10, alpha=0.3, label="MS selection")
+    plt.scatter(abscissa, ordinate, s=10, alpha=0.2, label="All")
     plt.scatter(
         abscissa[refstars_mask],
         ordinate[refstars_mask],
@@ -104,17 +107,20 @@ def plot_rotated_cmd(
     )
 
     # Fiducial line
-    ys = np.linspace(np.nanmin(ordinate), np.nanmax(ordinate), 100)
-    plt.plot(fiducial_line(ys), ys, label="Fiducial line", zorder=10, c="red")
+    ys = np.linspace(median_ordinate.min(), median_ordinate.max(), 100)
+    plt.plot(fiducial_line(ys), ys, label="Fiducial line", zorder=10, c="C3")
+
+    # Median values
+    plt.plot(median_abscissa, median_ordinate, "o", color="yellow")
 
     plt.legend()
     plt.xlabel("Abscissa")
     plt.ylabel("Ordinate")
-    plt.xlim(-1.0, 7.0)  # TODO: remove limits
+    plt.xlim(-2.0, 7.0)  # TODO: remove limits
 
     # Delta abscissa ----------------
     plt.subplot(122, sharey=ax)
-    plt.scatter(delta_abscissa, ordinate, s=10, alpha=0.3, label="MS selection")
+    plt.scatter(delta_abscissa, ordinate, s=10, alpha=0.3, label="MS")
     plt.scatter(
         delta_abscissa[refstars_mask],
         ordinate[refstars_mask],
@@ -128,10 +134,14 @@ def plot_rotated_cmd(
 
     plt.legend()
     plt.xlabel("$\Delta$ Abscissa")
-    plt.xlim(-2.0, 1.0)  # TODO: remove limits
+    plt.xlim(-1.2, 1.2)  # TODO: remove limits
 
     fname = Config.PLOTDIR / f"{object_name}_rotated_cmd_e{epoch}.png"
     plt.savefig(fname)
+
+
+def plot_difreddening(table):
+    pass
 
 
 # Deprecated
