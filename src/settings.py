@@ -9,3 +9,4 @@ class Config:
     CATALOGS = pathlib.Path("./catalogs.yaml")
     CL_SELECTION = pathlib.Path("./difred_params.yaml")
     PLOTDIR = pathlib.Path("./plots")
+    DIFREDDIR = PLOTDIR / "difred"

@@ -11,7 +11,12 @@ from sklearn.neighbors import NearestNeighbors
 from src.models import StarCluster
 from src.param_loader import DifRedClusterParams
 from src.settings import Config
-from src.plots import plot_cmd_reddening_vector, plot_rotated_cmd, plot_dereddened_cmd
+from src.plots import (
+    plot_cmd_reddening_vector,
+    plot_rotated_cmd,
+    plot_dereddened_cmd,
+    plot_difred_test,
+)
 
 
 def _cols2array(table: Table, columns: list[str]) -> np.ndarray:
@@ -87,8 +92,11 @@ def differential_reddening_correction(
 
     # Select only data from stars within the MS CMD region
     cmd_data = _cols2array(membertable, ["BP-RP", "Gmag"])
-    ms_data = replace_points_outside_rectangle_region_with_nan(cmd_data, ms_region)
+    ms_mask, ms_data = replace_points_outside_rectangle_region_with_nan(
+        cmd_data, ms_region
+    )
     membertable = _append_array_to_table(membertable, ms_data, ["ms_BP-RP", "ms_Gmag"])
+    membertable = _append_array_to_table(membertable, ms_mask, ["ms_mask"])
     plot_cmd_reddening_vector(membertable, origin, reddening_vector, star_cluster.name)
 
     # Apply linear transformation
@@ -100,13 +108,13 @@ def differential_reddening_correction(
         epoch=0,
     )
 
-    # Fit fiducial line
+    # Rotation
     abs_ord_data_ms = linear_transformation(ms_data, origin, reddening_vector)
     membertable = _append_array_to_table(
-        membertable,
-        abs_ord_data,
-        ["abscissa_ms", "ordinate_ms"]
+        membertable, abs_ord_data, ["abscissa_ms", "ordinate_ms"]
     )
+
+    # Get fiducial line (only for the first epoch)
     fiducial_line, median_abscissa, median_ordinate = fit_fiducial_line(abs_ord_data_ms)
 
     for epoch in range(epochs):
@@ -132,6 +140,13 @@ def differential_reddening_correction(
         membertable = _append_array_to_table(
             membertable, abs_ord_data, ["abscissa", "ordinate"], epoch + 1
         )
+
+        # Get main sequence abscissa and ordinate for each epoch.
+        # Not in use since fiducial line is only calculated for the first epoch.
+        # abs_ord_data_ms = _cols2array(
+        #     membertable[membertable["ms_mask"]],
+        #     [f"abscissa_{epoch + 1}", f"ordinate_{epoch + 1}"],
+        # )
 
         plot_rotated_cmd(
             membertable,
@@ -174,7 +189,7 @@ def get_points_within_range(
 def replace_points_outside_rectangle_region_with_nan(
     data: np.ndarray,
     limits: tuple[float, float, float, float],
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     """Replace points that are outside a predefined rectangular region with NaNs"""
 
     data = data.copy()
@@ -183,7 +198,7 @@ def replace_points_outside_rectangle_region_with_nan(
     below_sup = np.all(data <= np.array([[x2], [y2]]), axis=0)
     mask = above_inf * below_sup
     data[:, ~mask] = np.nan
-    return data
+    return mask, data
 
 
 def linear_transformation(
@@ -250,7 +265,9 @@ def get_delta_abscissa(data: np.ndarray, fiducial_line: CubicSpline) -> np.ndarr
     return data[0] - fiducial_line(data[1])
 
 
-def diffred_estimation(table: Table, epoch: int, k: float = 35) -> np.ndarray:
+def diffred_estimation(
+    table: Table, epoch: int, k: float = 35, plots: bool = False
+) -> np.ndarray:
     """Get the median color residual along the reddening vector (Δ abscissa) from k nearest neighbors"""
 
     # from sklearn.metrics import pairwise_distances
@@ -263,13 +280,14 @@ def diffred_estimation(table: Table, epoch: int, k: float = 35) -> np.ndarray:
     # Get coordinates
     coords = np.deg2rad(_cols2array(table, ["RA_ICRS", "DE_ICRS"]))
 
-    reference_star_table = table[table[f"ref_stars_{epoch}"]]
+    ref_star_mask = table[f"ref_stars_{epoch}"]
+    reference_star_table = table[ref_star_mask]
     coords_ref_stars = np.deg2rad(
         _cols2array(reference_star_table, ["RA_ICRS", "DE_ICRS"])
     )
 
-    # Find k-nearest reference stars
-    nn = NearestNeighbors(n_neighbors=k, metric="haversine").fit(coords_ref_stars.T)
+    # Find k-nearest reference stars metric: haversine
+    nn = NearestNeighbors(n_neighbors=k, metric="minkowski").fit(coords_ref_stars.T)
     ang_dist, indxs = nn.kneighbors(coords.T, return_distance=True)
 
     # Get median Δ abscissa values from k nearest reference stars
@@ -286,21 +304,45 @@ def diffred_estimation(table: Table, epoch: int, k: float = 35) -> np.ndarray:
 
     # median_delta_abscissa = np.nanmedian(neighbors_deltas, axis=1)
     median_delta_abscissa = np.nanmedian(
-       sigma_clip(
-           neighbors_deltas,
-           sigma_lower=3,
-           sigma_upper=3,
-           cenfunc="median",
-           axis=1,
-           masked=False,
-       ),
-       axis=1,
+        sigma_clip(
+            neighbors_deltas,
+            sigma_lower=3,
+            sigma_upper=3,
+            cenfunc="median",
+            axis=1,
+            masked=False,
+        ),
+        axis=1,
     )
 
     # Replace nan values with 0
     median_delta_abscissa = np.nan_to_num(median_delta_abscissa)
 
+    # Test Plots
+    ref_ordinates = _cols2array(reference_star_table, [f"ordinate_{epoch}"])
+    if plots:
+        plot_difred_test(
+            cluster_coords=coords,
+            cluster_delta_abscissa=_cols2array(table, [f"delta_abscissa_{epoch}"]),
+            cluster_ordinates=_cols2array(table, [f"ordinate_{epoch}"]),
+            ref_coords=coords_ref_stars,
+            ref_delta_abscissa=delta_abscissa,
+            ref_ordinates=ref_ordinates,
+            nn_coords=np.array(
+                [
+                    np.take(coords_ref_stars[0], indxs),
+                    np.take(coords_ref_stars[1], indxs),
+                ]
+            ),
+            nn_delta_abscissa=neighbors_deltas,
+            nn_ordinates=np.take(ref_ordinates, indxs),
+            median_values=median_delta_abscissa,
+            object_name="Test",
+            epoch=epoch,
+        )
+
     # Compute correction
+    print(np.mean(median_delta_abscissa))
     table[f"median_delta_abscissa_{epoch}"] = median_delta_abscissa
     abscissa_corrected = table[f"abscissa_{epoch}"] - median_delta_abscissa
     table["abscissa_corrected"] = abscissa_corrected

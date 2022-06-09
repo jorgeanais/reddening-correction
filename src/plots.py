@@ -1,3 +1,4 @@
+from cProfile import label
 from turtle import color
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,6 +46,7 @@ def plot_cmd_reddening_vector(
     fname = Config.PLOTDIR / f"{object_name}_cmd_reddening_vector.png"
     plt.savefig(fname)
     plt.clf()
+    plt.close()
 
 
 def plot_dereddened_cmd(
@@ -68,10 +70,11 @@ def plot_dereddened_cmd(
     plt.xlabel("$G_{BP} - G_{RP}$")
     plt.ylabel("G")
     plt.legend()
-    #plt.gca().set_aspect("equal")
+    # plt.gca().set_aspect("equal")
     fname = Config.PLOTDIR / f"{object_name}_dereddened_cmd.png"
     plt.savefig(fname)
     plt.clf()
+    plt.close()
 
 
 def plot_rotated_cmd(
@@ -138,10 +141,189 @@ def plot_rotated_cmd(
 
     fname = Config.PLOTDIR / f"{object_name}_rotated_cmd_e{epoch}.png"
     plt.savefig(fname)
+    plt.close()
 
 
-def plot_difreddening(table):
-    pass
+def plot_difred_test(
+    cluster_coords: np.ndarray,
+    cluster_delta_abscissa: np.ndarray,
+    cluster_ordinates: np.ndarray,
+    ref_coords: np.ndarray,
+    ref_delta_abscissa: np.ndarray,
+    ref_ordinates: np.ndarray,
+    nn_coords: np.ndarray,
+    nn_delta_abscissa: np.ndarray,
+    nn_ordinates: np.ndarray,
+    median_values: np.ndarray,
+    object_name: str,
+    epoch: int,
+) -> None:
+    """Plot diferential reddening calculation for each star and iteration"""
+
+    def _individual_plot(
+        object_name: str,
+        epoch: int,
+        star_ra: float,
+        star_dec: float,
+        star_ord: float,
+        star_delta_abs: float,
+        cl_ra: np.ndarray,
+        cl_dec: np.ndarray,
+        cl_ord: np.ndarray,
+        cl_delta_abs: np.ndarray,
+        ref_ra: np.ndarray,
+        ref_dec: np.ndarray,
+        ref_ord: np.ndarray,
+        ref_delta_abs: np.ndarray,
+        nn_ra: np.ndarray,
+        nn_dec: np.ndarray,
+        nn_ord: np.ndarray,
+        nn_delta_abs: np.ndarray,
+        median_value: float,
+        iteration: int,
+    ) -> None:
+        """Plot diferential reddening calculation for each individual star"""
+        plt.figure(figsize=(18, 6))
+        plt.suptitle(f"Rotated CMD {object_name} epoch {epoch}")
+
+        # Spatial plot
+        plt.subplot(121)
+        plt.scatter(
+            cl_ra,
+            cl_dec,
+            s=20,
+            alpha=0.3,
+            label="Cluster stars",
+            marker=".",
+            color="C7",
+        )
+        plt.scatter(
+            ref_ra,
+            ref_dec,
+            s=40,
+            alpha=0.3,
+            label="Reference stars",
+            marker="x",
+            color="C0",
+        )
+        plt.scatter(
+            nn_ra,
+            nn_dec,
+            s=40,
+            alpha=0.7,
+            label="Nearest neighbors",
+            marker="^",
+            color="C1",
+        )
+        plt.scatter(
+            star_ra,
+            star_dec,
+            s=70,
+            alpha=1.0,
+            label="Target star",
+            marker="*",
+            color="C3",
+        )
+        plt.xlabel("RA (deg)")
+        plt.ylabel("DEC (deg)")
+        plt.legend()
+        plt.gca().set_aspect("equal")
+
+        # ordinate vs Δ abscissa plot
+        plt.subplot(122)
+        plt.scatter(
+            cl_delta_abs,
+            cl_ord,
+            s=20,
+            alpha=0.3,
+            label="Cluster stars",
+            marker=".",
+            color="C7",
+        )
+        plt.scatter(
+            ref_delta_abs,
+            ref_ord,
+            s=40,
+            alpha=0.3,
+            label="Reference stars",
+            marker="x",
+            color="C0",
+        )
+        plt.scatter(
+            nn_delta_abs,
+            nn_ord,
+            s=40,
+            alpha=0.7,
+            label="Nearest neighbors",
+            marker="^",
+            color="C1",
+        )
+        plt.scatter(
+            star_delta_abs,
+            star_ord,
+            s=70,
+            alpha=1.0,
+            label="Target star",
+            marker="*",
+            color="C3",
+        )
+        plt.axvline(
+            x=median_value,
+            c="grey",
+            linestyle="--",
+            alpha=0.9,
+            label="Median",
+            color="C2",
+        )
+
+        ymin, ymax = plt.ylim()
+        plt.xlim(-2.0, 2.0)
+        plt.ylim(0.0, ymax)
+        plt.xlabel(r"$\Delta$ abscissa")
+        plt.ylabel("Ordinate")
+        plt.legend()
+
+        # Save
+        fname = Config.DIFREDDIR / f"difred_{object_name}_{epoch}_{iteration}.png"
+        plt.savefig(fname)
+        plt.close()
+
+    print("")
+    print(f"cluster_coords {cluster_coords.shape}")
+    print(f"cluster_delta_abscissa {cluster_delta_abscissa.shape}")
+    print(f"cluster_ordinates {cluster_ordinates.shape}")
+    print(f"ref_coords {ref_coords.shape}")
+    print(f"ref_delta_abscissa {ref_delta_abscissa.shape}")
+    print(f"ref_ordinates {ref_ordinates.shape}")
+    print(f"nn_coords {nn_coords.shape}")
+    print(f"nn_delta_abscissa {nn_delta_abscissa.shape}")
+    print(f"nn_ordinates {nn_ordinates.shape}")
+    print(f"median_values {median_values.shape}")
+
+    # For each row in nn variable, plot the diferential reddening
+    for i in range(nn_coords.shape[1]):
+        _individual_plot(
+            object_name=object_name,
+            epoch=epoch,
+            star_ra=cluster_coords[0, i],
+            star_dec=cluster_coords[1, i],
+            star_ord=cluster_ordinates[0, i],
+            star_delta_abs=cluster_delta_abscissa[0, i],
+            cl_ra=cluster_coords[0],
+            cl_dec=cluster_coords[1],
+            cl_ord=cluster_ordinates,
+            cl_delta_abs=cluster_delta_abscissa,
+            ref_ra=ref_coords[0],
+            ref_dec=ref_coords[1],
+            ref_ord=ref_ordinates,
+            ref_delta_abs=ref_delta_abscissa,
+            nn_ra=nn_coords[0, i, :],
+            nn_dec=nn_coords[1, i, :],
+            nn_ord=nn_ordinates[i],
+            nn_delta_abs=nn_delta_abscissa[i],
+            median_value=median_values[i],
+            iteration=i,
+        )
 
 
 # Deprecated
@@ -224,3 +406,5 @@ def _plot_cmd(
 
     plt.gca().set_aspect("equal")
     plt.show()
+    plt.clf()
+    plt.close()
