@@ -288,17 +288,6 @@ def plot_difred_test(
         plt.savefig(fname)
         plt.close()
 
-    print("")
-    print(f"cluster_coords {cluster_coords.shape}")
-    print(f"cluster_delta_abscissa {cluster_delta_abscissa.shape}")
-    print(f"cluster_ordinates {cluster_ordinates.shape}")
-    print(f"ref_coords {ref_coords.shape}")
-    print(f"ref_delta_abscissa {ref_delta_abscissa.shape}")
-    print(f"ref_ordinates {ref_ordinates.shape}")
-    print(f"nn_coords {nn_coords.shape}")
-    print(f"nn_delta_abscissa {nn_delta_abscissa.shape}")
-    print(f"nn_ordinates {nn_ordinates.shape}")
-    print(f"median_values {median_values.shape}")
 
     # For each row in nn variable, plot the diferential reddening
     for i in range(nn_coords.shape[1]):
