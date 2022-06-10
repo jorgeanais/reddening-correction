@@ -269,7 +269,6 @@ def plot_difred_test(
         )
         plt.axvline(
             x=median_value,
-            c="grey",
             linestyle="--",
             alpha=0.9,
             label="Median",
@@ -291,6 +290,8 @@ def plot_difred_test(
 
     # For each row in nn variable, plot the diferential reddening
     for i in range(nn_coords.shape[1]):
+        if i % 100 == 0:
+            print(i)
         _individual_plot(
             object_name=object_name,
             epoch=epoch,

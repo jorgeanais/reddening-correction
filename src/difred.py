@@ -75,7 +75,7 @@ def apply_differential_reddening_correction(
 def differential_reddening_correction(
     star_cluster: StarCluster,
     drparams: DifRedClusterParams,
-    epochs: int = 4,
+    epochs: int = 2,
 ) -> Table:
     """Differential Reddening correction workflow"""
 
@@ -318,7 +318,7 @@ def diffred_estimation(
     # Replace nan values with 0
     median_delta_abscissa = np.nan_to_num(median_delta_abscissa)
 
-    # Test Plots
+    # Test Plots (slow!)
     ref_ordinates = _cols2array(reference_star_table, [f"ordinate_{epoch}"])
     if plots:
         plot_difred_test(
@@ -342,7 +342,7 @@ def diffred_estimation(
         )
 
     # Compute correction
-    print(np.mean(median_delta_abscissa))
+    print(f"epoch:{epoch}, Δ:{np.mean(median_delta_abscissa):.5f}", )
     table[f"median_delta_abscissa_{epoch}"] = median_delta_abscissa
     abscissa_corrected = table[f"abscissa_{epoch}"] - median_delta_abscissa
     table["abscissa_corrected"] = abscissa_corrected
