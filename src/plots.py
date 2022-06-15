@@ -43,7 +43,7 @@ def plot_cmd_reddening_vector(
     plt.ylabel("G")
     plt.legend()
     plt.gca().set_aspect("equal")
-    fname = Config.PLOTDIR / f"{object_name}_cmd_reddening_vector.png"
+    fname = Config.DIFREDDIR / f"{object_name}_cmd_reddening_vector.png"
     plt.savefig(fname)
     plt.clf()
     plt.close()
@@ -71,7 +71,7 @@ def plot_dereddened_cmd(
     plt.ylabel("G")
     plt.legend()
     # plt.gca().set_aspect("equal")
-    fname = Config.PLOTDIR / f"{object_name}_dereddened_cmd.png"
+    fname = Config.DIFREDDIR / f"{object_name}_dereddened_cmd.png"
     plt.savefig(fname)
     plt.clf()
     plt.close()
@@ -139,7 +139,7 @@ def plot_rotated_cmd(
     plt.xlabel("$\Delta$ Abscissa")
     plt.xlim(-1.2, 1.2)  # TODO: remove limits
 
-    fname = Config.PLOTDIR / f"{object_name}_rotated_cmd_e{epoch}.png"
+    fname = Config.DIFREDDIR / f"{object_name}_rotated_cmd_e{epoch}.png"
     plt.savefig(fname)
     plt.close()
 
@@ -286,7 +286,6 @@ def plot_difred_test(
         fname = Config.DIFREDDIR / f"difred_{object_name}_{epoch}_{iteration}.png"
         plt.savefig(fname)
         plt.close()
-
 
     # For each row in nn variable, plot the diferential reddening
     for i in range(nn_coords.shape[1]):

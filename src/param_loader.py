@@ -13,6 +13,7 @@ class DifRedClusterParams:
     ms_region: tuple[float, float, float, float]
     origin: tuple[float, float]
     ref_stars_range: tuple[float, float]
+    bin_width: float
 
     @pydantic.validator("ms_region")
     def check_ms_region(cls, value):

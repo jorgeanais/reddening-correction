@@ -1,29 +1,130 @@
-# - cluster_name: IC_2714
-# - cluster_name: Melotte_71
-# - cluster_name: NGC_1245
-# - cluster_name: NGC_1817
+- cluster_name: IC_2714
+  ms_region: [0.48, 1.8, 12.5, 18.0]
+  origin: [0.48, 12.4]
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.2
+- cluster_name: Melotte_71
+  ms_region: [0.48, 1.2, 13.8, 17.7]
+  origin: [0.5, 13.7]
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.15
+- cluster_name: NGC_1245
+  ms_region: [0.6, 1.1, 14.3, 17.5]
+  origin: [0.6, 14.4]
+  ref_stars_range: [0.1, 0.8]
+  bin_width: 0.15
+- cluster_name: NGC_1817
+  ms_region: [0.54, 1.3, 13.1, 17.3]
+  origin: [0.54, 13.1]
+  ref_stars_range: [0.1, 1.0]
+  bin_width: 0.15
 - cluster_name: NGC_2099  # Cordoni's paper example
   ms_region: [0.4, 1.6, 12.3, 18.0]
   origin: [0.4, 12.3]
   ref_stars_range: [0.2, 1.2]
-# - cluster_name: NGC_2360
-# - cluster_name: NGC_2818
-# - cluster_name: NGC_3114
-# - cluster_name: NGC_3532
-# - cluster_name: NGC_5822
-# - cluster_name: NGC_6705
-# - cluster_name: NGC_2287
-# - cluster_name: Collinder_110  # Jorge's selection from now on
-# - cluster_name: Collinder_463
-# - cluster_name: IC_4725
-# - cluster_name: NGC_1817
-# - cluster_name: NGC_2168
-# - cluster_name: NGC_2204
-# - cluster_name: NGC_2360
-# - cluster_name: NGC_2423 
-# - cluster_name: NGC_2447
-# - cluster_name: NGC_2506
-# - cluster_name: NGC_6134
-# - cluster_name: NGC_6259
-# - cluster_name: NGC_6494
-# - cluster_name: NGC_6940
+  bin_width: 0.1
+- cluster_name: NGC_2360
+  ms_region: [0.44, 1.8, 11.7, 17.7]
+  origin: [0.44, 11.7]
+  ref_stars_range: [0.2, 1.4]
+  bin_width: 0.1
+- cluster_name: NGC_2818
+  ms_region: [0.46, 1.07, 14.1, 17.5]
+  origin: [0.46, 14.14]
+  ref_stars_range: [0.05, 0.85]
+  bin_width: 0.2
+- cluster_name: NGC_3114
+  ms_region: [-0.05, 1.74, 9.69, 17.6]
+  origin: [-0.05, 9.69]
+  ref_stars_range: [0.2, 1.9]
+  bin_width: 0.17
+- cluster_name: NGC_3532
+  ms_region: [0.0, 2.2, 8.4, 17.5]
+  origin: [0.01, 8.4]
+  ref_stars_range: [0.5, 0.9]
+  bin_width: 0.2
+- cluster_name: NGC_5822
+  ms_region: [0.47, 1.8, 11.84, 17.4]
+  origin: [0.47, 11.84]
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.15
+- cluster_name: NGC_6705
+  ms_region: [0.45, 1.41, 12.8, 17.33]
+  origin: [0.45, 12.8]
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.2
+- cluster_name: NGC_2287
+  ms_region: [-0.07, 2.04, 9.37, 17.7]
+  origin: [-0.07, 9.37]
+  ref_stars_range: [0.3, 1.8]
+  bin_width: 0.15
+- cluster_name: Collinder_110  # Jorge's selection from here on
+  ms_region: [0.94, 1.67, 14.5, 17.8]
+  origin: [0.94, 14.5]
+  ref_stars_range: [0.0, 0.8]
+  bin_width: 0.18
+- cluster_name: Collinder_463
+  ms_region: [0.27, 1.9, 10.13, 17.4]
+  origin: [0.27, 10.13]
+  ref_stars_range: [0.2, 1.7]
+  bin_width: 0.18
+- cluster_name: IC_4725
+  ms_region: [0.34, 2.08, 9.87, 17.3]
+  origin: [0.34, 9.87]
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.2
+- cluster_name: NGC_1817
+  ms_region: [0.54, 1.22, 13.13, 17.0]
+  origin: [0.54, 13.13]
+  ref_stars_range: [0.2, 0.95]
+  bin_width: 0.18
+- cluster_name: NGC_2168
+  ms_region: [0.14, 1.89, 10.63, 17.5]
+  origin: [0.14, 10.63]
+  ref_stars_range: [0.3, 1.6]
+  bin_width: 0.2
+- cluster_name: NGC_2204
+  ms_region: [0.53, 0.98, 15.5, 17.9]
+  origin: [0.53, 15.5]
+  ref_stars_range: [0.05, 0.7]
+  bin_width: 0.2
+- cluster_name: NGC_2360
+  ms_region: [0.44, 1.76, 11.77, 17.3]
+  origin: [0.44, 11.77]
+  ref_stars_range: [0.2, 1.4]
+  bin_width: 0.15
+- cluster_name: NGC_2423 
+  ms_region: [0.41, 1.76, 11.4, 17.4]
+  origin: []
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.2
+- cluster_name: NGC_2447
+  ms_region: [0.07, 1.79, 10.85, 17.5]
+  origin: [0.07, 10.85]
+  ref_stars_range: [0.4, 1.4]
+  bin_width: 0.15
+- cluster_name: NGC_2506
+  ms_region: [0.53, 1.06, 15.3, 17.8]
+  origin: [0.53, 15.3]
+  ref_stars_range: [0.1, 0.5]
+  bin_width: 0.2
+- cluster_name: NGC_6134
+  ms_region: [0.87, 1.89, 13.2, 17.5]
+  origin: [0.87, 13.2]
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.17
+- cluster_name: NGC_6259
+  ms_region: [0.76, 1.82, 12.94, 16.6]
+  origin: [0.76, 12.94]
+  ref_stars_range: [0.0, 0.75]
+  bin_width: 0.2
+- cluster_name: NGC_6494
+  ms_region: [0.47, 2.1, 11.03, 17.33]
+  origin: [0.47, 11.03]
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.2
+- cluster_name: NGC_6940
+  ms_region: [0.5, 1.9, 12.07, 17.3]
+  origin: [0.5, 12.07]
+  ref_stars_range: [0.2, 1.2]
+  bin_width: 0.15

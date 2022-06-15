@@ -51,7 +51,7 @@ def _sigmaclip_median(array: np.ndarray) -> float:
     x = array.copy()
     x = x[~np.isnan(x)]
     clipped = sigma_clip(
-        x, sigma_lower=4, sigma_upper=2, cenfunc="median", masked=False
+        x, sigma_lower=3, sigma_upper=2, cenfunc="median", masked=False
     )
     return np.median(clipped)
 
@@ -59,15 +59,15 @@ def _sigmaclip_median(array: np.ndarray) -> float:
 def apply_differential_reddening_correction(
     drpl: list[DifRedClusterParams],
     clusters: dict[str, StarCluster],
-) -> list[Table]:
+) -> dict[str, Table]:
     """Apply Differential Reddening correction to all clusters defined in a list"""
 
     print("Appling differential reddening correction...")
-    results = []
+    results = dict()
     for drparams in drpl:
         cl = clusters[drparams.cluster_name]
         r = differential_reddening_correction(cl, drparams)
-        results.append(r)
+        results[drparams.cluster_name] = r
 
     return results
 
@@ -115,11 +115,11 @@ def differential_reddening_correction(
     )
 
     # Get fiducial line (only for the first epoch)
-    fiducial_line, median_abscissa, median_ordinate = fit_fiducial_line(abs_ord_data_ms)
+    fiducial_line, median_abscissa, median_ordinate = fit_fiducial_line(
+        abs_ord_data_ms, bin_width=drparams.bin_width
+    )
 
     for epoch in range(epochs):
-
-        print(f"Epoch: {epoch}")
 
         # Get `Δ abscissa` from fiducial line
         delta_abscissa = get_delta_abscissa(abs_ord_data, fiducial_line)
@@ -288,18 +288,18 @@ def diffred_estimation(
 
     # Find k-nearest reference stars metric: haversine
     nn = NearestNeighbors(n_neighbors=k, metric="minkowski").fit(coords_ref_stars.T)
-    ang_dist, indxs = nn.kneighbors(coords.T, return_distance=True)
+    dist, indxs = nn.kneighbors(coords.T, return_distance=True)
 
     # Get median Δ abscissa values from k nearest reference stars
     delta_abscissa = _cols2array(reference_star_table, [f"delta_abscissa_{epoch}"])
     neighbors_deltas = np.take(delta_abscissa, indxs)
 
     # check that the distance to a reference star is less than X arcminutes
-    # ang_dist = np.rad2deg(ang_dist) * 60
+    # dist = np.rad2deg(dist) * 60
 
     # Replace with nan the values that are not nearby
-    # neighbors_deltas_n = np.where(ang_dist < 3.0, neighbors_deltas, np.nan)
-    # neighbors_deltas_n = np.where(ang_dist > 0.001, neighbors_deltas, np.nan)
+    # neighbors_deltas_n = np.where(dist < 3.0, neighbors_deltas, np.nan)
+    # neighbors_deltas_n = np.where(dist > 0.001, neighbors_deltas, np.nan)
     # print("Avg. non nan values", np.mean(np.sum(~np.isnan(neighbors_deltas_n), axis=1)))
 
     # median_delta_abscissa = np.nanmedian(neighbors_deltas, axis=1)
@@ -342,7 +342,9 @@ def diffred_estimation(
         )
 
     # Compute correction
-    print(f"epoch:{epoch}, Δ:{np.mean(median_delta_abscissa):.5f}", )
+    print(
+        f"epoch:{epoch}, Δ:{np.mean(median_delta_abscissa):.5f}",
+    )
     table[f"median_delta_abscissa_{epoch}"] = median_delta_abscissa
     abscissa_corrected = table[f"abscissa_{epoch}"] - median_delta_abscissa
     table["abscissa_corrected"] = abscissa_corrected
