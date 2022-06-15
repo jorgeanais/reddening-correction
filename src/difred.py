@@ -80,6 +80,7 @@ def differential_reddening_correction(
     """Differential Reddening correction workflow"""
 
     # Get params
+    print(star_cluster.name)
     ms_region = drparams.ms_region
     origin = drparams.origin
     ref_stars_range = drparams.ref_stars_range
