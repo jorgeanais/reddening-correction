@@ -16,6 +16,7 @@ from src.plots import (
     plot_rotated_cmd,
     plot_dereddened_cmd,
     plot_difred_test,
+    plot_dereddened_cmd_for_report
 )
 
 
@@ -87,6 +88,7 @@ def differential_reddening_correction(
     reddening_vector = tuple(
         np.squeeze(_cols2array(star_cluster.paramtable, ["E(GBP - GRP)", "A_G"]))
     )
+
 
     # Get cluster's data (astropy table)
     membertable = star_cluster.membertable.copy()
@@ -171,6 +173,7 @@ def differential_reddening_correction(
     )
 
     plot_dereddened_cmd(membertable, star_cluster.name)
+    plot_dereddened_cmd_for_report(membertable, star_cluster.name, reddening_vector)
 
     return membertable
 

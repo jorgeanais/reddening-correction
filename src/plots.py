@@ -76,6 +76,57 @@ def plot_dereddened_cmd(
     plt.clf()
     plt.close()
 
+def plot_dereddened_cmd_for_report(
+    table: Table,
+    object_name: str,
+    reddening_vector: tuple[float, float],
+) -> None:
+    """Plot CMD with reddening vector for report"""
+
+    color = table["BP-RP"]
+    magnitude = table["Gmag"]
+    color_dered = table["BP-RP_dered"]
+    magnitude_dered = table["Gmag_dered"]
+
+    # Plot CMD
+    plt.figure(figsize=(10, 8))
+    plt.suptitle(object_name.replace("_"," "))
+    
+    ax1 = plt.subplot(121)
+    plt.scatter(color, magnitude, c="C0", s=15, alpha=0.3, label="original")
+    xmin, xmax = ax1.get_xlim()
+    ymin, ymax = ax1.get_ylim()
+    plt.quiver(
+        xmin + (xmax - xmin) * 0.1,
+        ymin + (ymax - ymin) * 0.1,
+        reddening_vector[0],
+        reddening_vector[1],
+        angles="xy",
+        scale_units="xy",
+        scale=1,
+        width=0.01,
+        color="red",
+        zorder=10,
+    )
+    ax1.invert_yaxis()
+    plt.xlabel("$G_{BP} - G_{RP}$")
+    plt.ylabel("G")
+    plt.title("Original")
+
+    ax2 = plt.subplot(122, sharey=ax1)
+    plt.scatter(
+        color_dered, magnitude_dered, c="C0", s=15, alpha=0.3, label="Corrected"
+    )
+    plt.xlabel("$G_{BP} - G_{RP}$")
+    plt.ylabel("G")
+    plt.title("Corrected")
+
+    plt.tight_layout()
+    fname = Config.DIFREDDIR / f"{object_name}_dereddened_cmd_report.png"
+    plt.savefig(fname)
+    plt.clf()
+    plt.close()
+
 
 def plot_rotated_cmd(
     table: Table,
