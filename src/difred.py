@@ -219,6 +219,10 @@ def linear_transformation(
     # CMD Rotation
     rot_angle = -np.arctan(vector[1] / vector[0])
 
+    if np.isnan(rot_angle):
+        # In case of negligible reddening vector, set it to -62.4 deg (Gaia DR2's value)
+        rot_angle = np.deg2rad(-62.4)
+
     if inverse:
         rot_angle = -rot_angle
 

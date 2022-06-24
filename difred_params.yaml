@@ -38,11 +38,13 @@
   origin: [-0.05, 9.69]
   ref_stars_range: [0.2, 1.9]
   bin_width: 0.17
-# - cluster_name: NGC_3532
-#   ms_region: [0.0, 2.2, 8.4, 17.5]
-#   origin: [0.01, 8.4]
-#   ref_stars_range: [0.5, 0.9]
-#   bin_width: 0.2
+
+- cluster_name: NGC_3532
+  ms_region: [-0.0015, 2.20, 8.98, 16.51]
+  origin: [-0.0015, 8.98]
+  ref_stars_range: [0.4, 1.55]
+  bin_width: 0.18
+
 - cluster_name: NGC_5822
   ms_region: [0.47, 1.8, 11.84, 17.4]
   origin: [0.47, 11.84]
