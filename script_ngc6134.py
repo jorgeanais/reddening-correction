@@ -10,7 +10,7 @@ from src.settings import Config
 CLUSTER_NAME = "NGC_6134_NIR"
 
 # Read data
-members = Table.read("NGC_6134.csv", format="csv")
+members = Table.read(Config.DATA_DIR / "NGC_6134.csv", format="csv")
 members["mj-mk"] = members["mj"] - members["mk"]
 members["RA_ICRS"] = members["ra"]  # Rename columns
 members["DE_ICRS"] = members["dec"]
