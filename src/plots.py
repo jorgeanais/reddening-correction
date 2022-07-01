@@ -12,9 +12,9 @@ from src.settings import Config
 RELABEL = {
     "mk": r"$K_{s}$",
     "mj-mk": r"$J - K_{s}$",
-    "Gmag":r"$G$",
-    "BP-RP":r"$G_{BP} - G_{RP}$",
-    }
+    "Gmag": r"$G$",
+    "BP-RP": r"$G_{BP} - G_{RP}$",
+}
 
 
 def plot_cmd_reddening_vector(

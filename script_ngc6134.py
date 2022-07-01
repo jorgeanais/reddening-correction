@@ -65,7 +65,7 @@ t = differential_reddening_correction(
 )
 
 t.write(
-            str(Config.PROC_DATA / f"{CLUSTER_NAME}_dered.vot"),
-            overwrite=True,
-            format="votable",
-        )
+    str(Config.PROC_DATA / f"{CLUSTER_NAME}_dered.vot"),
+    overwrite=True,
+    format="votable",
+)
