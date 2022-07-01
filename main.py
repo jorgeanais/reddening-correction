@@ -29,7 +29,7 @@ if __name__ == "__main__":
     catalogs, clusters, difred_params, corrected = main()
     for cluster_name, table in corrected.items():
         table.write(
-            str(Config.TEST_DATA / f"{cluster_name}_dered.vot"),
+            str(Config.PROC_DATA / f"{cluster_name}_dered.vot"),
             overwrite=True,
             format="votable",
         )

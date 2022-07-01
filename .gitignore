@@ -129,6 +129,5 @@ dmypy.json
 .pyre/
 
 # Data folder
-data/raw/*
-plots/*
+data/raw/*.pkl
 data/test/*
