@@ -16,7 +16,7 @@ from src.plots import (
     plot_rotated_cmd,
     plot_dereddened_cmd,
     plot_difred_test,
-    plot_dereddened_cmd_for_report
+    plot_dereddened_cmd_for_report,
 )
 
 
@@ -77,6 +77,10 @@ def differential_reddening_correction(
     star_cluster: StarCluster,
     drparams: DifRedClusterParams,
     epochs: int = 2,
+    color_excess: str = "E(GBP - GRP)",
+    extinction: str = "A_G",
+    color: str = "BP-RP",
+    magnitude: str = "Gmag",
 ) -> Table:
     """Differential Reddening correction workflow"""
 
@@ -86,21 +90,29 @@ def differential_reddening_correction(
     origin = drparams.origin
     ref_stars_range = drparams.ref_stars_range
     reddening_vector = tuple(
-        np.squeeze(_cols2array(star_cluster.paramtable, ["E(GBP - GRP)", "A_G"]))
+        np.squeeze(_cols2array(star_cluster.paramtable, [color_excess, extinction]))
     )
-
 
     # Get cluster's data (astropy table)
     membertable = star_cluster.membertable.copy()
 
     # Select only data from stars within the MS CMD region
-    cmd_data = _cols2array(membertable, ["BP-RP", "Gmag"])
+    cmd_data = _cols2array(membertable, [color, magnitude])
     ms_mask, ms_data = replace_points_outside_rectangle_region_with_nan(
         cmd_data, ms_region
     )
-    membertable = _append_array_to_table(membertable, ms_data, ["ms_BP-RP", "ms_Gmag"])
+    membertable = _append_array_to_table(
+        membertable, ms_data, [f"ms_{color}", f"ms_{magnitude}"]
+    )
     membertable = _append_array_to_table(membertable, ms_mask, ["ms_mask"])
-    plot_cmd_reddening_vector(membertable, origin, reddening_vector, star_cluster.name)
+    plot_cmd_reddening_vector(
+        membertable,
+        origin,
+        reddening_vector,
+        star_cluster.name,
+        color_col=color,
+        magnitude_col=magnitude,
+    )
 
     # Apply linear transformation
     abs_ord_data = linear_transformation(cmd_data, origin, reddening_vector)
@@ -169,11 +181,19 @@ def differential_reddening_correction(
         inverse=True,
     )
     membertable = _append_array_to_table(
-        membertable, dereddened_cmd, ["BP-RP_dered", "Gmag_dered"]
+        membertable, dereddened_cmd, [f"{color}_dered", f"{magnitude}_dered"]
     )
 
-    plot_dereddened_cmd(membertable, star_cluster.name)
-    plot_dereddened_cmd_for_report(membertable, star_cluster.name, reddening_vector)
+    plot_dereddened_cmd(
+        membertable, star_cluster.name, color_col=color, magnitude_col=magnitude
+    )
+    plot_dereddened_cmd_for_report(
+        membertable,
+        star_cluster.name,
+        reddening_vector,
+        color_col=color,
+        magnitude_col=magnitude,
+    )
 
     return membertable
 

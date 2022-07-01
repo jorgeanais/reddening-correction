@@ -9,18 +9,28 @@ from scipy.interpolate import CubicSpline
 from src.settings import Config
 
 
+RELABEL = {
+    "mk": r"$K_{s}$",
+    "mj-mk": r"$J - K_{s}$",
+    "Gmag":r"$G$",
+    "BP-RP":r"$G_{BP} - G_{RP}$",
+    }
+
+
 def plot_cmd_reddening_vector(
     table: Table,
     origin: tuple[float, float],
     reddening_vector: tuple[float, float],
     object_name: str,
+    color_col: str = "BP-RP",
+    magnitude_col: str = "Gmag",
 ) -> None:
     """Plot CMD with reddening vector"""
 
-    color = table["BP-RP"]
-    magnitude = table["Gmag"]
-    ms_color = table["ms_BP-RP"]
-    ms_magnitude = table["ms_Gmag"]
+    color = table[color_col]
+    magnitude = table[magnitude_col]
+    ms_color = table[f"ms_{color_col}"]
+    ms_magnitude = table[f"ms_{magnitude_col}"]
 
     # Plot CMD
     plt.figure(figsize=(6, 10))
@@ -39,8 +49,8 @@ def plot_cmd_reddening_vector(
         zorder=10,
     )
     plt.title(f"CMD {object_name}")
-    plt.xlabel("$G_{BP} - G_{RP}$")
-    plt.ylabel("G")
+    plt.xlabel(RELABEL[color_col] if color_col in RELABEL else color_col)
+    plt.ylabel(RELABEL[magnitude_col] if magnitude_col in RELABEL else magnitude_col)
     plt.legend()
     plt.gca().set_aspect("equal")
     fname = Config.DIFREDDIR / f"{object_name}_cmd_reddening_vector.png"
@@ -52,13 +62,15 @@ def plot_cmd_reddening_vector(
 def plot_dereddened_cmd(
     table: Table,
     object_name: str,
+    color_col: str = "BP-RP",
+    magnitude_col: str = "Gmag",
 ) -> None:
     """Plot CMD with reddening vector"""
 
-    color = table["BP-RP"]
-    magnitude = table["Gmag"]
-    color_dered = table["BP-RP_dered"]
-    magnitude_dered = table["Gmag_dered"]
+    color = table[color_col]
+    magnitude = table[magnitude_col]
+    color_dered = table[f"{color_col}_dered"]
+    magnitude_dered = table[f"{magnitude_col}_dered"]
 
     # Plot CMD
     plt.figure(figsize=(6, 10))
@@ -67,8 +79,8 @@ def plot_dereddened_cmd(
         color_dered, magnitude_dered, c="C0", s=10, alpha=0.3, label="dereddened"
     )
     plt.title(f"De-reddended CMD {object_name}")
-    plt.xlabel("$G_{BP} - G_{RP}$")
-    plt.ylabel("G")
+    plt.xlabel(RELABEL[color_col] if color_col in RELABEL else color_col)
+    plt.ylabel(RELABEL[magnitude_col] if magnitude_col in RELABEL else magnitude_col)
     plt.legend()
     # plt.gca().set_aspect("equal")
     fname = Config.DIFREDDIR / f"{object_name}_dereddened_cmd.png"
@@ -76,22 +88,25 @@ def plot_dereddened_cmd(
     plt.clf()
     plt.close()
 
+
 def plot_dereddened_cmd_for_report(
     table: Table,
     object_name: str,
     reddening_vector: tuple[float, float],
+    color_col: str = "BP-RP",
+    magnitude_col: str = "Gmag",
 ) -> None:
     """Plot CMD with reddening vector for report"""
 
-    color = table["BP-RP"]
-    magnitude = table["Gmag"]
-    color_dered = table["BP-RP_dered"]
-    magnitude_dered = table["Gmag_dered"]
+    color = table[color_col]
+    magnitude = table[magnitude_col]
+    color_dered = table[f"{color_col}_dered"]
+    magnitude_dered = table[f"{magnitude_col}_dered"]
 
     # Plot CMD
     plt.figure(figsize=(10, 8))
-    plt.suptitle(object_name.replace("_"," "))
-    
+    plt.suptitle(object_name.replace("_", " "))
+
     ax1 = plt.subplot(121)
     plt.scatter(color, magnitude, c="C0", s=15, alpha=0.3, label="original")
     xmin, xmax = ax1.get_xlim()
@@ -109,16 +124,16 @@ def plot_dereddened_cmd_for_report(
         zorder=10,
     )
     ax1.invert_yaxis()
-    plt.xlabel("$G_{BP} - G_{RP}$")
-    plt.ylabel("G")
+    plt.xlabel(RELABEL[color_col] if color_col in RELABEL else color_col)
+    plt.ylabel(RELABEL[magnitude_col] if magnitude_col in RELABEL else magnitude_col)
     plt.title("Original")
 
     ax2 = plt.subplot(122, sharey=ax1)
     plt.scatter(
         color_dered, magnitude_dered, c="C0", s=15, alpha=0.3, label="Corrected"
     )
-    plt.xlabel("$G_{BP} - G_{RP}$")
-    plt.ylabel("G")
+    plt.xlabel(RELABEL[color_col] if color_col in RELABEL else color_col)
+    plt.ylabel(RELABEL[magnitude_col] if magnitude_col in RELABEL else magnitude_col)
     plt.title("Corrected")
 
     plt.tight_layout()
@@ -364,87 +379,3 @@ def plot_difred_test(
             median_value=median_values[i],
             iteration=i,
         )
-
-
-# Deprecated
-def _plot_cmd(
-    cmd_data: np.ndarray,
-    reddening_vector: tuple[float, float],
-    origin: tuple[float, float],
-    object_name: str,
-) -> None:
-    """Plot CMD"""
-
-    dpi = 60
-    plt.figure(figsize=(920 / dpi, 720 / dpi), dpi=dpi)
-
-    slope = reddening_vector[1] / reddening_vector[0]
-
-    plt.scatter(cmd_data[0], cmd_data[1], alpha=0.5, s=10)
-    plt.axline(origin, slope=slope, color="black", linestyle=(0, (5, 5)))
-    plt.axline(origin, slope=-1.0 / slope, color="black", linestyle=(0, (5, 5)))
-    plt.quiver(
-        origin[0],
-        origin[1],
-        reddening_vector[0],
-        reddening_vector[1],
-        angles="xy",
-        scale_units="xy",
-        scale=1,
-        width=0.025,
-        color="red",
-        zorder=10,
-    )
-
-    theta_ab = -np.arctan2(reddening_vector[1], reddening_vector[0])
-    ab_factor = 1.5
-    ab_label = [
-        (origin[0] + 0.1) + ab_factor * np.cos(theta_ab),
-        (origin[1] + 0.1) - ab_factor * np.sin(theta_ab),
-    ]
-    plt.text(
-        ab_label[0],
-        ab_label[1],
-        "Abscissa",
-        fontsize=14,
-        rotation=np.rad2deg(theta_ab),
-        rotation_mode="anchor",
-    )
-
-    theta_or = np.pi * 0.5 + theta_ab
-    or_factor = 0.4
-    or_label = [
-        (origin[0] + 0.2) + or_factor * np.cos(theta_or),
-        (origin[1] + 0.1) - or_factor * np.sin(theta_or),
-    ]
-    plt.text(
-        or_label[0],
-        or_label[1],
-        "Ordinate",
-        fontsize=14,
-        rotation=np.rad2deg(theta_or),
-        rotation_mode="anchor",
-    )
-    plt.text(
-        origin[0] - 0.15,
-        origin[1] + 0.2,
-        "$O$",
-        fontsize=14,
-    )
-
-    plt.xlabel("$G_{BP} - G_{RP}$")
-    plt.ylabel("$G$")
-    ymin, ymax = plt.ylim()
-    plt.ylim(ymax, ymin)
-
-    plt.text(
-        origin[0],
-        ymin + 0.5,
-        object_name.replace("_", " "),
-        fontsize=14,
-    )
-
-    plt.gca().set_aspect("equal")
-    plt.show()
-    plt.clf()
-    plt.close()
