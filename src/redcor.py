@@ -9,7 +9,9 @@ RE_AGBP_AV = 1.002
 RE_AGRP_AV = 0.589
 
 
-def reddening_correction(cl: StarCluster) -> None:
+def reddening_correction(
+    cl: StarCluster, magnitude_col: str = "Gmag", color_col: str = "BP-RP"
+) -> None:
     """Distance and color correction for a cluster."""
 
     A_V = cl.paramtable["AVNN"]
@@ -22,13 +24,17 @@ def reddening_correction(cl: StarCluster) -> None:
     cl.paramtable["E(GBP - GRP)"] = color_excess
     cl.paramtable["A_G"] = A_G
 
-    cl.membertable["Gmag_corr"] = cl.membertable["Gmag"] - dm - A_G
-    cl.membertable["BP-RP_corr"] = cl.membertable["BP-RP"] - color_excess
+    cl.membertable[f"{magnitude_col}_corr"] = cl.membertable[magnitude_col] - dm - A_G
+    cl.membertable[f"{color_col}_corr"] = cl.membertable[color_col] - color_excess
 
 
-def apply_reddening_correction(clusters: dict[str, StarCluster]) -> None:
+def apply_reddening_correction(
+    clusters: dict[str, StarCluster],
+    magnitude_col: str = "Gmag",
+    color_col: str = "BP-RP",
+) -> None:
     """Apply distance and color correction to all clusters."""
 
     print("Appling reddening correction...")
     for cl in tqdm(clusters.values()):
-        reddening_correction(cl)
+        reddening_correction(cl, magnitude_col, color_col)

@@ -10,3 +10,4 @@ class Config:
     CL_SELECTION = pathlib.Path("./difred_params.yaml")
     PLOTDIR = pathlib.Path("./plots")
     DIFREDDIR = PLOTDIR / "difred"
+    DIFDISTCOR = PLOTDIR / "difdist"

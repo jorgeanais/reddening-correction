@@ -5,7 +5,7 @@ from astropy.coordinates import SkyCoord
 from astropy import table
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class StarCluster:
     """A Star Cluster representation."""
 
