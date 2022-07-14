@@ -1,10 +1,12 @@
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
+import numpy as np
 
 from src.difred import differential_reddening_correction
 from src.models import StarCluster
 from src.param_loader import DifRedClusterParams
 from src.settings import Config
+from src.plots import plot_dif_dist_corrected
 
 
 CLUSTER_NAME = "NGC_6134_NIR"
@@ -64,8 +66,17 @@ t = differential_reddening_correction(
     magnitude="mk",
 )
 
+# Distance correction
+dm = 5 * np.log10(params["d"]) - 5
+t["mk_dered_corr"] = t["mk_dered"] - dm - params["A_Ks"]
+t["mj-mk_dered_corr"] = t["mj-mk_dered"] - params["E(J-Ks)"]
+
+plot_dif_dist_corrected(t, CLUSTER_NAME, color_col="mj-mk_dered_corr", magnitude_col="mk_dered_corr")
+
 t.write(
-    str(Config.PROC_DATA / f"{CLUSTER_NAME}_dered.vot"),
+    str(Config.PROC_DATA / f"{CLUSTER_NAME}_dered_dist.vot"),
     overwrite=True,
     format="votable",
 )
+
+

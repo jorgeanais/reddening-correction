@@ -7,6 +7,7 @@ from src.param_loader import DifRedParamLoader
 from src.redcor import apply_reddening_correction
 from src.difred import apply_differential_reddening_correction
 from src.plots import plot_dif_dist_corrected
+from src.settings import Config
 
 
 # Load clusters from catalogs
@@ -32,10 +33,16 @@ for cluster_name, table in corrected.items():
 # Apply distance correction on top of differential reddening correction
 apply_reddening_correction(processed_clusters, "Gmag_dered", "BP-RP_dered")
 
+
+# Plot and save results
 for cluster_name, cluster in processed_clusters.items():
     plot_dif_dist_corrected(cluster.membertable, cluster_name)
+    cluster.membertable.write(
+            str(Config.PROC_DATA / f"{cluster_name}_dered_dist.vot"),
+            overwrite=True,
+            format="votable",
+        )
     print(f"{cluster_name} done")
-
 
 # Load files
 # files = glob.glob(str(Config.PROC_DATA / "*.vot"))

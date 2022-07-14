@@ -12,6 +12,8 @@ from src.settings import Config
 RELABEL = {
     "mk": r"$K_{s}$",
     "mj-mk": r"$J - K_{s}$",
+    "mk_dered_corr": r"$K_{s}$",
+    "mj-mk_dered_corr": r"$J - K_{s}$",
     "Gmag": r"$G$",
     "BP-RP": r"$G_{BP} - G_{RP}$",
     "Gmag_dered_corr": r"$G$",
