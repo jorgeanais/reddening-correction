@@ -14,8 +14,8 @@ RELABEL = {
     "mj-mk": r"$J - K_{s}$",
     "Gmag": r"$G$",
     "BP-RP": r"$G_{BP} - G_{RP}$",
-    "Gmag_dered": r"$G$",
-    "BP-RP_dered": r"$G_{BP} - G_{RP}$",
+    "Gmag_dered_corr": r"$G$",
+    "BP-RP_dered_corr": r"$G_{BP} - G_{RP}$",
 }
 
 
@@ -396,7 +396,7 @@ def plot_dif_dist_corrected(
 
     plt.scatter(color, magnitude, c="C0", s=15, alpha=0.3, label="Corrected")
     plt.gca().invert_yaxis()
-    plt.title(f"CMD {object_name.replace('_', ' ')}")
+    plt.title(object_name.replace('_', ' '))
     plt.xlabel(RELABEL[color_col] if color_col in RELABEL else color_col)
     plt.ylabel(RELABEL[magnitude_col] if magnitude_col in RELABEL else magnitude_col)
     fname = Config.DIFDISTCOR / f"{object_name}_cmd.png"
